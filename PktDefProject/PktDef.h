@@ -1,67 +1,138 @@
-// PktDef.h
-#ifndef PktDef_H
-#define PktDef_H
+#ifndef PKTDEF_H
+#define PKTDEF_H
 
-#include <iostream>
-#include <cstring>
+#include <cstring>   // For memcpy
+#include <cstdlib>   // For malloc/free
 
-enum CmdType { DRIVE, SLEEP, RESPONSE };
+/*
+    CSCN72050 Term Project, Protocol vW25B
+    Milestone #1
 
-// Constants
+    The application layer protocol consists of:
+      - A Header (4 bytes total):
+          • PktCount: unsigned short (2 bytes)
+          • Command Flags: bit-fields Drive, Status, Sleep, Ack in 1 byte with 4 bits of padding.
+          • Length: unsigned char (1 byte) representing the total number of bytes in the packet.
+      - Packet Body:
+          • For Drive commands: Contains drive parameters (DriveBody) with:
+              - Direction (1 byte): FORWARD (1), BACKWARD (2), RIGHT (3), LEFT (4)
+              - Duration (1 byte): Time in seconds to execute command
+              - Speed (1 byte): Duty cycle percentage between 80-100
+          • For Sleep and Response commands: No body data.
+      - Packet Trailer:
+          • CRC: 1 byte (unsigned char) parity check calculated by counting the number of bits set to '1'
+*/
+
+// Constant definitions for drive directions and header size.
 const int FORWARD = 1;
 const int BACKWARD = 2;
-const int LEFT = 3;
-const int RIGHT = 4;
-const int HEADERSIZE = 7; // Calculation: PktCount (2 bytes) + Flags (1 byte) + Length (2 bytes) + Padding (4 bits) = 7 bytes
+const int RIGHT = 3;
+const int LEFT = 4;
+// HEADERSIZE calculated by hand: PktCount (2 bytes) + Command Flags (1 byte) + Length (1 byte) = 4 bytes.
+const int HEADERSIZE = 4;
 
 class PktDef {
-private:
-    struct Header {
-        unsigned short int PktCount; // 2 bytes
-        bool Drive;                  // 1 bit
-        bool Status;                 // 1 bit
-        bool Sleep;                  // 1 bit
-        bool Ack;                    // 1 bit
-        unsigned char Padding : 4;   // Padding for alignment (4 bits)
-        unsigned short int Length;   // 2 bytes
-    };
-
-    struct DriveBody {
-        unsigned char Direction;     // 1 byte
-        unsigned char Duration;      // 1 byte
-        unsigned char Speed;         // 1 byte
-    };
-
-    Header header;
-    DriveBody driveBody;
-    char* Data;
-    unsigned char CRC;
-    char* RawBuffer;
-
 public:
-    // Constructors and Destructor
+    // Enumerated command types.
+    enum CmdType { DRIVE, SLEEP, RESPONSE };
+
+    // Packet Header structure definition.
+    struct Header {
+        unsigned short PktCount; // Unsigned short integer that increments with each packet transmitted.
+
+        // Command Flags: 1-byte with bit-fields for Drive, Status, Sleep, Ack and 4 bits of padding.
+        union {
+            struct {
+                unsigned Drive : 1; // Set to 1 if the command is a DRIVE command.
+                unsigned Status : 1; // Set to 1 if the command is a telemetry/status response.
+                unsigned Sleep : 1; // Set to 1 if the command is a SLEEP command.
+                unsigned Ack : 1; // Set to 1 if the packet is an acknowledgement.
+                unsigned Padding : 4; // Four bits of padding (should be set to 0).
+            };
+            unsigned char CmdFlags;  // Access all flags as a single byte.
+        };
+
+        unsigned char Length;      // Total number of bytes in the packet (Header + Body + Trailer).
+    };
+
+    // Drive command parameter structure.
+    struct DriveBody {
+        unsigned char Direction; // 1-byte direction: FORWARD, BACKWARD, RIGHT, or LEFT.
+        unsigned char Duration;  // 1-byte duration (in seconds).
+        unsigned char Speed;     // 1-byte motor speed percentage (80-100).
+    };
+
+    // --- Constructors and Destructor ---
+
+    // Default constructor:
+    //   - Initializes Header values to zero.
+    //   - Data pointer is set to nullptr.
+    //   - CRC is set to zero.
     PktDef();
-    PktDef(char*);
+
+    // Overloaded constructor:
+    //   - Accepts a raw data buffer, parses it, and populates the Header, Body, and CRC.
+    PktDef(char* rawBuffer);
+
+    // Destructor:
+    //   - Frees any allocated memory for Data and RawBuffer.
     ~PktDef();
 
-    // Setters
-    void SetCmd(CmdType);
-    void SetBodyData(char*, int);
-    void SetPktCount(int);
+    // --- Member Functions ---
 
-    // Getters
-    CmdType GetCmd();
-    bool GetAck();
-    int GetLength();
-    char* GetBodyData();
-    int GetPktCount();
+    // Sets the command flag in the header based on the provided CmdType.
+    void SetCmd(CmdType cmd);
 
-    // CRC Functions
-    bool CheckCRC(char*, int);
+    // Sets the packet body data.
+    // Allocates memory for the Data field and copies the provided raw data buffer.
+    void SetBodyData(char* data, int size);
+
+    // Sets the packet counter (PktCount) in the header.
+    void SetPktCount(int pktCount);
+
+    // Returns the command type based on the header flags.
+    CmdType GetCmd() const;
+
+    // Returns true if the Ack flag in the header is set; otherwise, false.
+    bool GetAck() const;
+
+    // Returns the packet Length (total number of bytes) from the header.
+    int GetLength() const;
+
+    // Returns a pointer to the packet's body data.
+    char* GetBodyData() const;
+
+    // Returns the packet counter (PktCount) value.
+    int GetPktCount() const;
+
+    // Checks the CRC of a given raw data buffer.
+    // Calculates the CRC and compares it with the CRC in the provided buffer.
+    // Returns true if they match, otherwise false.
+    bool CheckCRC(char* buffer, int size) const;
+
+    // Calculates the 1-byte CRC for the packet (by counting bits set to '1')
+    // and updates the packet's CRC field.
     void CalcCRC();
 
-    // Generate Packet
+    // Generates a complete serialized packet in RawBuffer.
+    // Copies the Header, Data, and CRC into RawBuffer.
+    // Returns a pointer to the allocated RawBuffer.
     char* GenPacket();
+
+private:
+    // Private structure that defines the complete command packet.
+    struct CmdPacket {
+        Header header;  // Packet header.
+        char* Data;     // Pointer to the packet body data.
+        unsigned char CRC; // 1-byte CRC for packet validation.
+    } packet;
+
+    // A pointer to a raw data buffer that holds the serialized packet ready for transmission.
+    char* RawBuffer;
+
+    // Helper function:
+    // Counts the number of bits set to '1' in a given unsigned char.
+    int CountBits(unsigned char byte) const;
 };
 
-#endif
+#endif // PKTDEF_H
