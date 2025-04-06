@@ -9,7 +9,11 @@
 PktDef::PktDef() {
     packet.header.PktCount = 0;
     // Initialize the command flags to zero (Drive, Status, Sleep, Ack, and Padding)
-    packet.header.CmdFlags = 0;
+    //packet.header.CmdFlags = 0;
+    packet.header.Ack = false;
+    packet.header.Sleep = false;
+    packet.header.Status = false;
+    packet.header.Drive = false;
     // Set default Length to header (4 bytes) + trailer (1 byte) when there is no body.
     packet.header.Length = HEADERSIZE + 1;
     packet.Data = nullptr;
@@ -51,21 +55,39 @@ PktDef::~PktDef() {
 
 // SetCmd: Sets the command flag in the header based on the provided CmdType.
 // Clears any previously set flags.
-void PktDef::SetCmd(CmdType cmd) {
-    // Clear all command flag bits (including Ack and padding will remain 0)
-    packet.header.CmdFlags = 0;
-    switch (cmd) {
-    case DRIVE:
-        packet.header.Drive = 1;
-        break;
-    case SLEEP:
-        packet.header.Sleep = 1;
-        break;
-    case RESPONSE:
-        packet.header.Status = 1;
-        break;
-    }
-    // Note: The Ack flag is not set here.
+//void PktDef::SetCmd(CmdType cmd) {
+//    // Clear all command flag bits (padding will remain 0)
+//    packet.header.CmdFlags = 0;
+//    switch (cmd) {
+//    case DRIVE:
+//        packet.header.Drive = 1;
+//        break;
+//    case SLEEP:
+//        packet.header.Sleep = 1;
+//        break;
+//    case RESPONSE:
+//        packet.header.Status = 1;
+//        break;
+//    }
+//    //
+//    
+//    //
+//}
+
+void PktDef::SetCmd(CmdType cmdType) {
+    packet.header.Drive = false;
+    packet.header.Status = false;
+    packet.header.Sleep = false;
+    packet.header.Ack = true;
+
+    if (cmdType == DRIVE)
+        packet.header.Drive = true;
+    else if (cmdType == SLEEP)
+        packet.header.Sleep = true;
+    else if (cmdType == RESPONSE)
+        packet.header.Status = true;
+    else
+        packet.header.Ack = false;
 }
 
 // SetBodyData: Allocates memory for the packet body (Data) and copies the provided data.

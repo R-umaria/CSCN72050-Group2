@@ -1,6 +1,7 @@
 #ifndef PKTDEF_H
 #define PKTDEF_H
 
+#include <memory>
 #include <cstring>   // For memcpy
 #include <cstdlib>   // For malloc/free
 
@@ -31,36 +32,46 @@ const int LEFT = 4;
 // HEADERSIZE calculated by hand: PktCount (2 bytes) + Command Flags (1 byte) + Length (1 byte) = 4 bytes.
 const int HEADERSIZE = 4;
 
+// Packet Header structure definition.
+//struct Header {
+//    unsigned short PktCount; // Unsigned short integer that increments with each packet transmitted.
+//
+//    // Command Flags: 1-byte with bit-fields for Drive, Status, Sleep, Ack and 4 bits of padding.
+//    union {
+//        struct {
+//            unsigned Drive : 1; // Set to 1 if the command is a DRIVE command.
+//            unsigned Status : 1; // Set to 1 if the command is a telemetry/status response.
+//            unsigned Sleep : 1; // Set to 1 if the command is a SLEEP command.
+//            unsigned Ack : 1; // Set to 1 if the packet is an acknowledgement.
+//            unsigned Padding : 4; // Four bits of padding (should be set to 0).
+//        };
+//        unsigned char CmdFlags;  // Access all flags as a single byte.
+//    };
+//
+//    unsigned char Length;      // Total number of bytes in the packet (Header + Body + Trailer).
+//};
+
+struct Header {
+    unsigned short int PktCount; // 2 bytes
+    bool Drive : 1;                  // 1 bit
+    bool Status : 1;                 // 1 bit
+    bool Sleep : 1;                  // 1 bit
+    bool Ack : 1;                    // 1 bit
+    unsigned char Padding : 4;   // Padding for alignment (4 bits)
+    uint8_t Length;   // 1 byte
+};
+
+// Drive command parameter structure.
+struct DriveBody {
+    unsigned char Direction; // 1-byte direction: FORWARD, BACKWARD, RIGHT, or LEFT.
+    unsigned char Duration;  // 1-byte duration (in seconds).
+    unsigned char Speed;     // 1-byte motor speed percentage (80-100).
+};
+
 class PktDef {
 public:
     // Enumerated command types.
     enum CmdType { DRIVE, SLEEP, RESPONSE };
-
-    // Packet Header structure definition.
-    struct Header {
-        unsigned short PktCount; // Unsigned short integer that increments with each packet transmitted.
-
-        // Command Flags: 1-byte with bit-fields for Drive, Status, Sleep, Ack and 4 bits of padding.
-        union {
-            struct {
-                unsigned Drive : 1; // Set to 1 if the command is a DRIVE command.
-                unsigned Status : 1; // Set to 1 if the command is a telemetry/status response.
-                unsigned Sleep : 1; // Set to 1 if the command is a SLEEP command.
-                unsigned Ack : 1; // Set to 1 if the packet is an acknowledgement.
-                unsigned Padding : 4; // Four bits of padding (should be set to 0).
-            };
-            unsigned char CmdFlags;  // Access all flags as a single byte.
-        };
-
-        unsigned char Length;      // Total number of bytes in the packet (Header + Body + Trailer).
-    };
-
-    // Drive command parameter structure.
-    struct DriveBody {
-        unsigned char Direction; // 1-byte direction: FORWARD, BACKWARD, RIGHT, or LEFT.
-        unsigned char Duration;  // 1-byte duration (in seconds).
-        unsigned char Speed;     // 1-byte motor speed percentage (80-100).
-    };
 
     // --- Constructors and Destructor ---
 
