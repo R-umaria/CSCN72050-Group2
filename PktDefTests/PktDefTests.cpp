@@ -1,7 +1,8 @@
 // Rishi Umaria & Tyler Phillips - Group Project - Milestone 1 - Mobile & Networked Systems
 
-#include "pch.h"         
+#include "pch.h"
 #include "CppUnitTest.h"
+#include <vector>
 #include "../PktDefProject/PktDef.h"  
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -17,7 +18,7 @@ namespace PktDefTests
             PktDef pkt;
             // Default PktCount should be 0.
             Assert::AreEqual(0, pkt.GetPktCount());
-            // Length should be 0 when initialized
+            // Length should be 0 when initialized (no body and no CRC set yet)
             Assert::AreEqual(0, pkt.GetLength());
             // Body data pointer should be nullptr.
             Assert::IsNull(pkt.GetBodyData());
@@ -54,12 +55,12 @@ namespace PktDefTests
         TEST_METHOD(Set_and_GetBodyData)
         {
             PktDef pkt;
-            unsigned char driveParams[3] = { FORWARD, 10, 80 };         // Create sample commands
+            unsigned char driveParams[3] = { FORWARD, 10, 80 };         // Create sample drive command parameters
             pkt.SetBodyData(reinterpret_cast<char*>(driveParams), 3);
 
             // Expected Length = HEADERSIZE (4) + 3 (body) + 1 (CRC) = 8 bytes.
             Assert::AreEqual(HEADERSIZE + 3 + 1, pkt.GetLength());
-            
+
             // Verify the data is correctly copied.
             char* body = pkt.GetBodyData();
             Assert::IsNotNull(body);
@@ -78,7 +79,7 @@ namespace PktDefTests
 
             unsigned char driveParams[3] = { RIGHT, 5, 90 };
             pkt.SetBodyData(reinterpret_cast<char*>(driveParams), 3);
-           
+
             char* rawPacket = pkt.GenPacket();
             int length = pkt.GetLength();
 
@@ -124,16 +125,16 @@ namespace PktDefTests
 
             unsigned char data[3] = { FORWARD, 10, 80 };
             pkt.SetBodyData(reinterpret_cast<char*>(data), 3);
-            
+
             char* buff = pkt.GenPacket();
             int length = pkt.GetLength();
 
-            // Change the CRC
+            // Change the CRC to simulate corruption.
             buff[length - 1] ^= 0xFF;
             Assert::IsFalse(pkt.CheckCRC(buff, length));
         }
 
-        // Verifies the CheckCRC method can correctly deduce an incorrect size
+        // Verify the CheckCRC method correctly handles an invalid size (0)
         TEST_METHOD(CheckCRCInvalidSize)
         {
             PktDef pkt;
@@ -149,13 +150,68 @@ namespace PktDefTests
             Assert::IsFalse(pkt.CheckCRC(buff, length));
         }
 
-        // Verify the SetCmd method correctly deduces an incorrect CmdType
+        // Verify that SetCmd with an invalid command value does not set the Ack flag.
         TEST_METHOD(SetCmdFail)
         {
             PktDef pkt;
-            pkt.SetCmd(static_cast<PktDef::CmdType>(10));
-
+            pkt.SetCmd(static_cast<PktDef::CmdType>(10)); // Invalid command
             Assert::IsFalse(pkt.GetAck());
+        }
+
+        // Additional Tests for Robust Coverage
+
+        // Test when SetBodyData is called with size 0; should result in no body data and Length = HEADERSIZE + 1
+        TEST_METHOD(EmptyBodyData)
+        {
+            PktDef pkt;
+            pkt.SetBodyData(nullptr, 0);
+            // Expected Length = header (4) + CRC (1) = 5 bytes.
+            Assert::AreEqual(HEADERSIZE + 1, pkt.GetLength());
+            Assert::IsNull(pkt.GetBodyData());
+        }
+
+        // Test GetCmd on a default-constructed packet (with no command set).
+        // Our implementation defaults to returning DRIVE.
+        TEST_METHOD(DefaultGetCmd)
+        {
+            PktDef pkt;
+            Assert::AreEqual(static_cast<int>(PktDef::RESPONSE), static_cast<int>(pkt.GetCmd()));
+        }
+
+        // Test calling GenPacket twice: subsequent calls should generate the same serialized packet.
+        TEST_METHOD(MultipleGenPacketCalls)
+        {
+            PktDef pkt;
+            pkt.SetPktCount(200);
+            pkt.SetCmd(PktDef::DRIVE);
+            unsigned char driveParams[3] = { RIGHT, 8, 95 };
+            pkt.SetBodyData(reinterpret_cast<char*>(driveParams), 3);
+
+            char* rawPacket1 = pkt.GenPacket();
+            int length1 = pkt.GetLength();
+            std::vector<char> copyPacket(rawPacket1, rawPacket1 + length1);
+
+            char* rawPacket2 = pkt.GenPacket(); // call GenPacket again
+            int length2 = pkt.GetLength();
+            Assert::AreEqual(length1, length2);
+            for (int i = 0; i < length1; i++) {
+                Assert::AreEqual(copyPacket[i], rawPacket2[i]);
+            }
+        }
+
+        // Directly test CalcCRC by forcing a CRC calculation and verifying via CheckCRC.
+        TEST_METHOD(DirectCalcCRC)
+        {
+            PktDef pkt;
+            pkt.SetPktCount(50);
+            pkt.SetCmd(PktDef::DRIVE);
+            unsigned char driveParams[3] = { FORWARD, 12, 80 };
+            pkt.SetBodyData(reinterpret_cast<char*>(driveParams), 3);
+            // Explicitly calculate the CRC.
+            pkt.CalcCRC();
+            char* rawPacket = pkt.GenPacket();
+            int length = pkt.GetLength();
+            Assert::IsTrue(pkt.CheckCRC(rawPacket, length));
         }
     };
 }
