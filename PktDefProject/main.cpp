@@ -1,3 +1,5 @@
+// Rishi Umaria & Tyler Phillips - Group Project - Milestone 1 - Mobile & Networked Systems
+
 // This main.cpp file is temporary and is used to check the functionality of the PktDef class.
 
 #include <iostream>
@@ -15,7 +17,6 @@ int main() {
     pkt.SetCmd(PktDef::DRIVE);
 
     // Create drive command parameters.
-    // For example: Direction = FORWARD (1), Duration = 10 seconds, Speed = 80.
     unsigned char driveParams[3];
     driveParams[0] = FORWARD;   // Direction: FORWARD (1)
     driveParams[1] = 10;        // Duration: 10 seconds
@@ -68,10 +69,6 @@ int main() {
         std::cout << "  Duration : " << static_cast<int>(driveBody[1]) << std::endl;
         std::cout << "  Speed    : " << static_cast<int>(driveBody[2]) << std::endl;
     }
-
-    // Free the allocated raw packet buffer (if not freed by PktDef destructor).
-    // Note: In this design, the RawBuffer is managed by the class and will be cleaned up when the object is destroyed.
-    // Here, we don't delete rawPacket because it is owned by the pkt instance.
 
     return 0;
 }
