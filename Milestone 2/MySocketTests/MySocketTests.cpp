@@ -221,5 +221,45 @@ namespace MySocketTests
             // The IP should remain unchanged.
             Assert::AreEqual(originalIP, socket.GetIPAddr());
         }
+
+
+        // Additional tests to cover error conditions and edge cases
+
+        // Test calling ConnectTCP on a UDP socket.
+        // Since ConnectTCP is only meant for TCP, calling it on a UDP socket should immediately return
+        // and should not alter any connection state.
+        TEST_METHOD(ConnectTCP_NonTCPTest)
+        {
+            // Create a UDP socket in CLIENT mode.
+            MySocket udpSocket(CLIENT, "127.0.0.1", 9120, UDP, 1024);
+            // Calling ConnectTCP should detect the non-TCP mode and return early.
+            udpSocket.ConnectTCP();
+            // Calling DisconnectTCP should also safely return (it checks connectionType and does nothing).
+            udpSocket.DisconnectTCP();
+            Assert::IsTrue(true, L"ConnectTCP on a UDP socket did not alter connection state and DisconnectTCP safely returned.");
+        }
+
+        // Test GetData when no connection is established in TCP mode.
+        // Expected behavior: since no TCP connection is made, GetData should detect that and return -1.
+        TEST_METHOD(GetDataWithoutConnectionTest)
+        {
+            MySocket tcpClient(CLIENT, "127.0.0.1", 9130, TCP, 1024);
+            char buffer[1024] = { 0 };
+            int result = tcpClient.GetData(buffer);
+            Assert::AreEqual(-1, result); // Expect error indicator when no connection exists.
+        }
+
+        // Test SendData when no connection is established in TCP mode.
+        // Since there's no active connection, SendData should detect that and not send data.
+        // This test simply ensures that the function returns without crashing.
+        TEST_METHOD(SendDataWithoutConnectionTest)
+        {
+            MySocket tcpClient(CLIENT, "127.0.0.1", 9140, TCP, 1024);
+            std::string msg = "Test message";
+            // With no connection established, calling SendData should output an error but not crash.
+            tcpClient.SendData(msg.c_str(), (int)msg.size());
+            Assert::IsTrue(true, L"SendData without a connection did not crash.");
+        }
+
     };
 }

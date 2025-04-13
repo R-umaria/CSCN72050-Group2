@@ -65,6 +65,7 @@ MySocket::MySocket(SocketType type, std::string ip, unsigned int port, Connectio
             SvrAddr.sin_port = htons(Port);
         }
     }
+    // In MySocket::MySocket(...) for the UDP branch
     else { // UDP
         // Create a UDP socket (for both CLIENT and SERVER)
         ConnectionSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -79,7 +80,17 @@ MySocket::MySocket(SocketType type, std::string ip, unsigned int port, Connectio
             exit(EXIT_FAILURE);
         }
         SvrAddr.sin_port = htons(Port);
+
+        // If in SERVER mode, bind the UDP socket so it can receive data.
+        if (mySocket == SERVER) {
+            if (bind(ConnectionSocket, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr)) == SOCKET_ERROR) {
+                std::cerr << "UDP Bind failed" << std::endl;
+                closesocket(ConnectionSocket);
+                exit(EXIT_FAILURE);
+            }
+        }
     }
+
 }
 
 MySocket::~MySocket() {
@@ -207,14 +218,18 @@ void MySocket::SetIPAddr(std::string ip) {
         std::cerr << "Cannot change IP address when connection is active" << std::endl;
         return;
     }
-    IPAddr = ip;
-    // Update SvrAddr as well
-    SvrAddr.sin_family = AF_INET;
-    if (InetPtonA(AF_INET, IPAddr.c_str(), &SvrAddr.sin_addr) != 1) {
-        std::cerr << "Invalid IP address format: " << IPAddr << std::endl;
-        // Optionally handle the error (for example, revert IPAddr to a default value)
+    // Try converting the new IP address first
+    struct in_addr tempAddr;
+    if (InetPtonA(AF_INET, ip.c_str(), &tempAddr) != 1) {
+        std::cerr << "Invalid IP address format: " << ip << std::endl;
+        return; // Do not update if conversion fails.
     }
+    // Conversion successful, update the IP and address structure.
+    IPAddr = ip;
+    SvrAddr.sin_family = AF_INET;
+    SvrAddr.sin_addr = tempAddr;
 }
+
 
 // Setter: change port number only if no active TCP connection exists
 void MySocket::SetPort(int port) {
