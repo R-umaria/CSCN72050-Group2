@@ -8,7 +8,17 @@ using namespace std;
 using namespace std::chrono;
 using namespace std::this_thread;
 
+void InitializeWinsock() {
+    WSADATA wsaData;
+    int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (result != 0) {
+        std::cerr << "WSAStartup failed with error: " << result << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
 int main(int argc, char* argv[]) {
+	InitializeWinsock();
     // Simple menu to choose the role.
     cout << "Select role:" << endl;
     cout << "1. Server" << endl;

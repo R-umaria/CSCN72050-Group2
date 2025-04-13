@@ -261,5 +261,134 @@ namespace MySocketTests
             Assert::IsTrue(true, L"SendData without a connection did not crash.");
         }
 
+
+
+        // Additional tests created by Tyler
+
+        TEST_METHOD(TCPDoubleConnectTest)
+        {
+            const int port = 9150;
+            const std::string ip = "127.0.0.1";
+            const int bufferSize = 1024;
+
+            // Create server and client sockets for TCP
+            MySocket serverSocket(SERVER, ip, port, TCP, bufferSize);
+            MySocket clientSocket(CLIENT, ip, port, TCP, bufferSize);
+
+            // Start the server thread to accept a connection.
+            std::thread serverThread([&serverSocket]() {
+                serverSocket.ConnectTCP();
+                // Keep connection open for a moment.
+                sleep_for(milliseconds(500));
+                });
+
+            // Allow server to start listening
+            sleep_for(milliseconds(100));
+
+            // Connect the client socket
+            clientSocket.ConnectTCP();
+            // Call ConnectTCP again on the already connected socket.
+            clientSocket.ConnectTCP(); // Expected to print "TCP already connected"
+
+            // Disconnect and clean up
+            clientSocket.DisconnectTCP();
+            serverSocket.DisconnectTCP();
+            serverThread.join();
+
+            Assert::IsTrue(true, L"Double connection attempt did not crash.");
+        }
+
+        // Test DisconnectTCP on a UDP socket (should simply print an error without crashing)
+        TEST_METHOD(DisconnectTCP_NonTCPTest)
+        {
+            // Create a UDP client socket
+            MySocket udpSocket(CLIENT, "127.0.0.1", 9200, UDP, 1024);
+            // Calling DisconnectTCP on a non-TCP socket should be a no-op.
+            udpSocket.DisconnectTCP();
+            Assert::IsTrue(true, L"DisconnectTCP on UDP socket did not crash.");
+        }
+
+        // Test SendData with a nullptr as data pointer
+        TEST_METHOD(SendDataNullTest)
+        {
+            // Create a UDP client socket; no connection is needed for this test.
+            MySocket udpSocket(CLIENT, "127.0.0.1", 9300, UDP, 1024);
+            // Should detect the null pointer and return early.
+            udpSocket.SendData(nullptr, 10);
+            Assert::IsTrue(true, L"SendData with nullptr did not crash.");
+        }
+
+        // Test SendData with 0 bytes
+        TEST_METHOD(SendDataZeroBytesTest)
+        {
+            MySocket udpSocket(CLIENT, "127.0.0.1", 9310, UDP, 1024);
+            // Zero bytes should be flagged as invalid.
+            udpSocket.SendData("Data", 0);
+            Assert::IsTrue(true, L"SendData with 0 bytes did not crash.");
+        }
+
+        // Test SendData with negative byte count
+        TEST_METHOD(SendDataNegativeBytesTest)
+        {
+            MySocket udpSocket(CLIENT, "127.0.0.1", 9320, UDP, 1024);
+            // Negative byte count should be handled gracefully.
+            udpSocket.SendData("Data", -5);
+            Assert::IsTrue(true, L"SendData with negative bytes did not crash.");
+        }
+
+        // Test setter functions on a UDP socket; for connectionless protocols, the setters should work normally.
+        TEST_METHOD(SettersUDPTest)
+        {
+            // Create a UDP client socket.
+            MySocket udpSocket(CLIENT, "127.0.0.1", 9330, UDP, 1024);
+            // Change settings; UDP does not have an active connection flag.
+            udpSocket.SetIPAddr("192.168.100.100");
+            udpSocket.SetPort(9400);
+            udpSocket.SetType(SERVER);  // Changing from CLIENT to SERVER for testing
+
+            Assert::AreEqual(std::string("192.168.100.100"), udpSocket.GetIPAddr());
+            Assert::AreEqual(9400, udpSocket.GetPort());
+            Assert::AreEqual(SERVER, udpSocket.GetType());
+        }
+
+        // Test a TCP client connecting to an unreachable server (simulate connection failure)
+        // Note: "192.0.2.1" is reserved for documentation and is not routable on the public Internet.
+        TEST_METHOD(TCPConnectFailureTest)
+        {
+            MySocket tcpClient(CLIENT, "192.0.2.1", 9450, TCP, 1024);
+            tcpClient.ConnectTCP();  // Expected to fail; ConnectTCP should print an error and not set bTCPConnect.
+
+            // Attempt to receive data; should return -1 because no connection exists.
+            char buffer[1024] = { 0 };
+            int result = tcpClient.GetData(buffer);
+            Assert::AreEqual(-1, result);
+
+            // Disconnect (should safely do nothing if not connected)
+            tcpClient.DisconnectTCP();
+        }
+
+        // Test valid SetIPAddr on a TCP socket when no connection is active.
+        TEST_METHOD(SetIPAddrValidTest)
+        {
+            MySocket tcpSocket(CLIENT, "127.0.0.1", 9470, TCP, 1024);
+            tcpSocket.SetIPAddr("10.1.1.1");
+            Assert::AreEqual(std::string("10.1.1.1"), tcpSocket.GetIPAddr());
+        }
+
+        // Test valid SetPort on a TCP socket when no connection is active.
+        TEST_METHOD(SetPortValidTest)
+        {
+            MySocket tcpSocket(CLIENT, "127.0.0.1", 9471, TCP, 1024);
+            tcpSocket.SetPort(1234);
+            Assert::AreEqual(1234, tcpSocket.GetPort());
+        }
+
+        // Test valid SetType on a TCP socket when no connection is active.
+        TEST_METHOD(SetTypeValidTest)
+        {
+            MySocket tcpSocket(CLIENT, "127.0.0.1", 9472, TCP, 1024);
+            tcpSocket.SetType(SERVER);
+            Assert::AreEqual(SERVER, tcpSocket.GetType());
+        }
     };
 }
