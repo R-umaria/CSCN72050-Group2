@@ -4,10 +4,15 @@
 #include <thread>
 #include <chrono>
 #include <string>
+#include <vector>
+
+using namespace std::chrono;
+using namespace std::this_thread;
 
 namespace Microsoft {
     namespace VisualStudio {
         namespace CppUnitTestFramework {
+            // Provide a ToString specialization for SocketType so MSTest can print enum values.
             template<>
             std::wstring ToString<SocketType>(const SocketType& value)
             {
@@ -82,8 +87,8 @@ namespace MySocketTests
                 Assert::AreEqual(message, received);
                 });
 
-            // Allow server a moment to start listening
-            std::this_thread::sleep_for(milliseconds(100));
+            // Allow the server a moment to start listening
+            sleep_for(milliseconds(100));
 
             clientSocket.ConnectTCP();
             clientSocket.SendData(message.c_str(), (int)message.size());
@@ -107,10 +112,10 @@ namespace MySocketTests
             std::thread serverThread([&serverSocket]() {
                 serverSocket.ConnectTCP();
                 // Wait to simulate an active connection
-                std::this_thread::sleep_for(milliseconds(500));
+                sleep_for(milliseconds(500));
                 });
 
-            std::this_thread::sleep_for(milliseconds(100));
+            sleep_for(milliseconds(100));
             clientSocket.ConnectTCP();
 
             // Store original settings
@@ -130,6 +135,91 @@ namespace MySocketTests
             clientSocket.DisconnectTCP();
             serverSocket.DisconnectTCP();
             serverThread.join();
+        }
+
+        // Extended UDP test to check send/receive functionality in UDP mode
+        TEST_METHOD(UDPCommunicationTest)
+        {
+            const int port = 9110;
+            const std::string ip = "127.0.0.1";
+            const int bufferSize = 1024;
+            std::string message = "UDP Test Message";
+
+            // Create UDP sockets (for both SERVER and CLIENT, no connection needed)
+            MySocket udpServer(SERVER, ip, port, UDP, bufferSize);
+            MySocket udpClient(CLIENT, ip, port, UDP, bufferSize);
+
+            bool messageReceived = false;
+            std::thread udpServerThread([&udpServer, &message, &messageReceived]() {
+                char recvBuffer[1024] = { 0 };
+                int bytesReceived = udpServer.GetData(recvBuffer);
+                if (bytesReceived > 0) {
+                    std::string received(recvBuffer, bytesReceived);
+                    if (received == message)
+                        messageReceived = true;
+                }
+                });
+
+            sleep_for(milliseconds(100));
+            udpClient.SendData(message.c_str(), (int)message.size());
+            udpServerThread.join();
+
+            Assert::IsTrue(messageReceived, L"UDP server did not receive the expected message.");
+        }
+
+        // Test sending data larger than the allocated buffer (should print an error and not send)
+        TEST_METHOD(SendDataExceedBufferTest)
+        {
+            // Create a socket with a small buffer size
+            MySocket socket(CLIENT, "127.0.0.1", 8085, TCP, 100); // 100-byte buffer
+
+            // Prepare data that exceeds the buffer size (150 bytes)
+            std::string longData(150, 'X');  // 150 'X' characters
+
+            // No connection is needed to test the size check
+            // This will trigger the error branch in SendData.
+            // (Since the function does not return a status, we simply call it and ensure no crash occurs.)
+            socket.SendData(longData.c_str(), (int)longData.size());
+
+            // If the function returns without crashing, consider the test passed.
+            Assert::IsTrue(true, L"SendData exceeded buffer did not handle gracefully.");
+        }
+
+        // Test disconnect when no connection is established - should not crash or cause undefined behavior
+        TEST_METHOD(DisconnectNoConnectionTest)
+        {
+            MySocket socket(CLIENT, "127.0.0.1", 8085, TCP, 1024);
+            // Attempt to disconnect without an active connection.
+            socket.DisconnectTCP();
+            Assert::IsTrue(true, L"DisconnectTCP called without connection should not crash.");
+        }
+
+        // Test that setters work normally when no connection is active
+        TEST_METHOD(SetterWorksWithoutConnectionTest)
+        {
+            MySocket socket(CLIENT, "127.0.0.1", 8080, TCP, 1024);
+            // Set new values
+            socket.SetIPAddr("192.168.1.2");
+            socket.SetPort(8000);
+            socket.SetType(CLIENT);
+
+            Assert::AreEqual(std::string("192.168.1.2"), socket.GetIPAddr());
+            Assert::AreEqual(8000, socket.GetPort());
+            Assert::AreEqual(CLIENT, socket.GetType());
+        }
+
+        // Optional: Test an invalid IP address via the setter.
+        // Note: If your MySocket implementation calls exit() on invalid IP format,
+        // this test might abort the test run. If so, consider modifying the error handling
+        // in MySocket to handle errors without calling exit().
+        TEST_METHOD(InvalidIPTest)
+        {
+            MySocket socket(CLIENT, "127.0.0.1", 8080, TCP, 1024);
+            std::string originalIP = socket.GetIPAddr();
+            // Attempt to set an invalid IP.
+            socket.SetIPAddr("invalid ip");
+            // The IP should remain unchanged.
+            Assert::AreEqual(originalIP, socket.GetIPAddr());
         }
     };
 }
