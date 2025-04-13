@@ -1,259 +1,250 @@
 #include "MySocket.h"
 
-// Define static variable for instance counting.
-int MySocket::instanceCount = 0;
+MySocket::MySocket(SocketType sType, std::string ip, unsigned int port, ConnectionType cType, unsigned int size)
+	: mySocket(sType), connectionType(cType), IPAddr(ip), Port(port), bTCPConnect(false) {
 
-MySocket::MySocket(SocketType type, std::string ip, unsigned int port, ConnectionType connection, unsigned int size)
-    : mySocket(type), IPAddr(ip), Port(port), connectionType(connection), bTCPConnect(false)
-{
-    // Initialize Winsock only once per application.
-    if (instanceCount == 0) {
-        WSADATA wsaData;
-        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-            std::cerr << "WSAStartup failed" << std::endl;
-            exit(EXIT_FAILURE);
-        }
-    }
-    instanceCount++;
+	//determine size
+	if (size > 0)
+		MaxSize = size;
+	else
+		MaxSize = DEFAULT_SIZE;
 
-    // Determine buffer size.
-    if (size > 0)
-        MaxSize = size;
-    else
-        MaxSize = DEFAULT_SIZE;
-    Buffer = new char[MaxSize];
+	//initialize buffer
+	Buffer = new char[MaxSize];
+	std::memset(Buffer, 0, MaxSize);
 
-    // Initialize socket(s) based on type and connection.
-    if (connectionType == TCP) {
-        if (mySocket == SERVER) {
-            // Create a TCP listening (welcome) socket.
-            WelcomeSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-            if (WelcomeSocket == INVALID_SOCKET) {
-                std::cerr << "Failed to create welcome socket" << std::endl;
-                exit(EXIT_FAILURE);
-            }
-            // Setup server address.
-            SvrAddr.sin_family = AF_INET;
-            if (InetPtonA(AF_INET, IPAddr.c_str(), &SvrAddr.sin_addr) != 1) {
-                std::cerr << "Invalid IP address format: " << IPAddr << std::endl;
-                exit(EXIT_FAILURE);
-            }
-            SvrAddr.sin_port = htons(Port);
+	//set up SvrAddr
+	memset(&SvrAddr, 0, sizeof(SvrAddr));
+	SvrAddr.sin_family = AF_INET;
+	SvrAddr.sin_port = htons(Port);
+	SvrAddr.sin_addr.s_addr = inet_addr(IPAddr.c_str());
 
-            // Bind the welcome socket.
-            if (bind(WelcomeSocket, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr)) == SOCKET_ERROR) {
-                std::cerr << "Bind failed" << std::endl;
-                closesocket(WelcomeSocket);
-                exit(EXIT_FAILURE);
-            }
-
-            // Listen for incoming connections.
-            if (listen(WelcomeSocket, SOMAXCONN) == SOCKET_ERROR) {
-                std::cerr << "Listen failed" << std::endl;
-                closesocket(WelcomeSocket);
-                exit(EXIT_FAILURE);
-            }
-            // For a server, ConnectionSocket will be set in ConnectTCP() when a client connects.
-        }
-        else { // TCP Client.
-            // Create a TCP socket for the client; connection happens later in ConnectTCP().
-            ConnectionSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-            if (ConnectionSocket == INVALID_SOCKET) {
-                std::cerr << "Failed to create client socket" << std::endl;
-                exit(EXIT_FAILURE);
-            }
-            // Prepare SvrAddr for later use in connect().
-            SvrAddr.sin_family = AF_INET;
-            if (InetPtonA(AF_INET, IPAddr.c_str(), &SvrAddr.sin_addr) != 1) {
-                std::cerr << "Invalid IP address format: " << IPAddr << std::endl;
-                exit(EXIT_FAILURE);
-            }
-            SvrAddr.sin_port = htons(Port);
-        }
-    }
-    else { // UDP.
-        // Create a UDP socket (for both CLIENT and SERVER).
-        ConnectionSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        if (ConnectionSocket == INVALID_SOCKET) {
-            std::cerr << "Failed to create UDP socket" << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        // Setup server address for UDP transmissions.
-        SvrAddr.sin_family = AF_INET;
-        if (InetPtonA(AF_INET, IPAddr.c_str(), &SvrAddr.sin_addr) != 1) {
-            std::cerr << "Invalid IP address format: " << IPAddr << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        SvrAddr.sin_port = htons(Port);
-
-        // If in SERVER mode, bind the UDP socket so it can receive data.
-        if (mySocket == SERVER) {
-            if (bind(ConnectionSocket, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr)) == SOCKET_ERROR) {
-                std::cerr << "UDP Bind failed" << std::endl;
-                closesocket(ConnectionSocket);
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
+	//determine connection type
+	if (cType == TCP) {
+		//determine socket type
+		if (sType == SERVER) {
+			WelcomeSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			if (WelcomeSocket == INVALID_SOCKET) {
+				std::cerr << "TCP Server socket creation failed: " << WSAGetLastError() << std::endl;
+				exit(1);
+			}
+			if (bind(WelcomeSocket, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr)) == SOCKET_ERROR) {
+				std::cerr << "TCP Server bind failed: " << WSAGetLastError() << std::endl;
+				closesocket(WelcomeSocket);
+				exit(1);
+			}
+			if (listen(WelcomeSocket, 1) == SOCKET_ERROR) {
+				std::cerr << "TCP Server listen failed: " << WSAGetLastError() << std::endl;
+				closesocket(WelcomeSocket);
+				exit(1);
+			}
+			std::cout << "TCP Server initialized and listening at ip: " << IPAddr << ", port: " << Port << std::endl;
+		}
+		else if (sType == CLIENT) {
+			ConnectionSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			if (ConnectionSocket == INVALID_SOCKET) {
+				std::cerr << "TCP Client socket creation failed: " << WSAGetLastError() << std::endl;
+				exit(1);
+			}
+			std::cout << "TCP Client initialized for server at ip: " << IPAddr << ", port: " << Port << std::endl;
+		}
+	}
+	else if (cType == UDP) {
+		if (sType == SERVER) {
+			ConnectionSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+			if (ConnectionSocket == INVALID_SOCKET) {
+				std::cerr << "UDP Server bind failed: " << WSAGetLastError() << std::endl;
+				exit(1);
+			}
+			if (bind(ConnectionSocket, (sockaddr*)&SvrAddr, sizeof(SvrAddr)) == SOCKET_ERROR) {
+				std::cerr << "UDP Server bind failed: " << WSAGetLastError() << std::endl;
+				closesocket(ConnectionSocket);
+				exit(1);
+			}
+			std::cout << "UDP Server initialized at ip: " << IPAddr << ", port: " << Port << std::endl;
+		}
+		else if (sType == CLIENT) {
+			ConnectionSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+			if (ConnectionSocket == INVALID_SOCKET) {
+				std::cerr << "UDP Client socket creation failed: " << WSAGetLastError() << std::endl;
+				exit(1);
+			}
+			std::cout << "UDP Client initialized for server at " << IPAddr << ", port " << Port << std::endl;
+		}
+	}
 }
 
 MySocket::~MySocket() {
-    // Clean up buffer.
-    delete[] Buffer;
-
-    // Close sockets if open.
-    if (connectionType == TCP) {
-        if (mySocket == SERVER && WelcomeSocket != INVALID_SOCKET) {
-            closesocket(WelcomeSocket);
-        }
-        if (bTCPConnect && ConnectionSocket != INVALID_SOCKET) {
-            closesocket(ConnectionSocket);
-        }
-    }
-    else {  // UDP socket.
-        if (ConnectionSocket != INVALID_SOCKET) {
-            closesocket(ConnectionSocket);
-        }
-    }
-
-    // Decrement instance count and cleanup Winsock if this was the last instance.
-    instanceCount--;
-    if (instanceCount == 0) {
-        WSACleanup();
-    }
+	//if TCP
+	if (connectionType == TCP) {
+		//if connected
+		if (bTCPConnect) {
+			DisconnectTCP();
+		}
+		//if server and not already closed
+		if (mySocket == SERVER && WelcomeSocket != INVALID_SOCKET) {
+			closesocket(WelcomeSocket);
+		}
+	}
+	//if not already closed
+	if (ConnectionSocket != INVALID_SOCKET) {
+		closesocket(ConnectionSocket);
+	}
+	delete[] Buffer;
 }
 
 void MySocket::ConnectTCP() {
-    if (connectionType != TCP) {
-        std::cerr << "ConnectTCP called on a non-TCP socket" << std::endl;
-        return;
-    }
-    if (bTCPConnect) {
-        std::cerr << "TCP Connection already established" << std::endl;
-        return;
-    }
-    if (mySocket == CLIENT) {
-        // For client, attempt to connect to server.
-        if (connect(ConnectionSocket, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr)) == SOCKET_ERROR) {
-            std::cerr << "Connect failed" << std::endl;
-            return;
-        }
-        bTCPConnect = true;
-    }
-    else if (mySocket == SERVER) {
-        // For server, accept an incoming connection on WelcomeSocket.
-        int addrLen = sizeof(SvrAddr);
-        ConnectionSocket = accept(WelcomeSocket, (struct sockaddr*)&SvrAddr, &addrLen);
-        if (ConnectionSocket == INVALID_SOCKET) {
-            std::cerr << "Accept failed" << std::endl;
-            return;
-        }
-        bTCPConnect = true;
-    }
+	//if not TCP
+	if (connectionType != TCP) {
+		std::cerr << "Cannot connect non-TCP socket" << std::endl;
+		return;
+	}
+	//if already connected
+	if (bTCPConnect) {
+		std::cerr << "TCP already connected" << std::endl;
+	}
+
+	//determine client or server
+	if (mySocket == CLIENT) {
+		//connect client
+		if ((connect(ConnectionSocket, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr))) == SOCKET_ERROR) {
+			std::cerr << "TCP Client connection failed: " << WSAGetLastError() << std::endl;
+			closesocket(ConnectionSocket);
+			return;
+		}
+		//set connected to true
+		bTCPConnect = true;
+		std::cout << "TCP Client successfully connected to server." << std::endl;
+	}
+	else if (mySocket == SERVER) {
+		//accept incoming connection request
+		int addrlen = sizeof(SvrAddr);
+		ConnectionSocket = accept(WelcomeSocket, (sockaddr*)&SvrAddr, &addrlen);
+		if (ConnectionSocket == INVALID_SOCKET) {
+			std::cerr << "TCP Server accept failed: " << WSAGetLastError() << std::endl;
+			return;
+		}
+		//set connected to true;
+		bTCPConnect = true;
+		std::cout << "TCP Server accepted client connection" << std::endl;
+	}
 }
 
 void MySocket::DisconnectTCP() {
-    if (connectionType != TCP) {
-        std::cerr << "DisconnectTCP called on a non-TCP socket" << std::endl;
-        return;
-    }
-    if (!bTCPConnect) {
-        std::cerr << "No TCP connection to disconnect" << std::endl;
-        return;
-    }
-    // Gracefully shutdown the connection.
-    shutdown(ConnectionSocket, SD_BOTH);
-    closesocket(ConnectionSocket);
-    ConnectionSocket = INVALID_SOCKET;
-    bTCPConnect = false;
+	//if not TCP
+	if (connectionType != TCP) {
+		std::cerr << "Cannot disconnect non-TCP socket" << std::endl;
+		return;
+	}
+	//if not connected
+	if (!bTCPConnect) {
+		std::cerr << "Cannot disconnect socket that isn't connected" << std::endl;
+		return;
+	}
+
+	//initiate 4-way handshake
+	shutdown(ConnectionSocket, SD_BOTH);
+	closesocket(ConnectionSocket);
+	ConnectionSocket = INVALID_SOCKET;
+	bTCPConnect = false;
 }
 
 void MySocket::SendData(const char* rawData, int bytes) {
-    if (bytes > MaxSize) {
-        std::cerr << "Data size exceeds allocated buffer" << std::endl;
-        return;
-    }
-    if (connectionType == TCP) {
-        if (!bTCPConnect) {
-            std::cerr << "TCP connection not established. Cannot send data." << std::endl;
-            return;
-        }
-        int sent = send(ConnectionSocket, rawData, bytes, 0);
-        if (sent == SOCKET_ERROR)
-            std::cerr << "TCP Send failed" << std::endl;
-    }
-    else { // UDP.
-        int sent = sendto(ConnectionSocket, rawData, bytes, 0, (struct sockaddr*)&SvrAddr, sizeof(SvrAddr));
-        if (sent == SOCKET_ERROR)
-            std::cerr << "UDP Send failed" << std::endl;
-    }
-}
-
-int MySocket::GetData(char* rawData) {
-    int received = 0;
-    if (connectionType == TCP) {
-        if (!bTCPConnect) {
-            std::cerr << "TCP connection not established. Cannot receive data." << std::endl;
-            return -1;
-        }
-        received = recv(ConnectionSocket, Buffer, MaxSize, 0);
-        if (received == SOCKET_ERROR) {
-            std::cerr << "TCP Receive failed" << std::endl;
-            return -1;
-        }
-    }
-    else { // UDP receive.
-        int addrLen = sizeof(SvrAddr);
-        received = recvfrom(ConnectionSocket, Buffer, MaxSize, 0, (struct sockaddr*)&SvrAddr, &addrLen);
-        if (received == SOCKET_ERROR) {
-            std::cerr << "UDP Receive failed" << std::endl;
-            return -1;
-        }
-    }
-    memcpy(rawData, Buffer, received);
-    return received;
+	if (rawData == nullptr || bytes > MaxSize || bytes <= 0) {
+		std::cerr << "Invalid data or bytes do not fit space within buffer" << std::endl;
+		return;
+	}
+	int bytesSent = 0;
+	if (connectionType == TCP) {
+		if (!bTCPConnect) {
+			std::cerr << "No TCP connection established for sending data" << std::endl;
+			return;
+		}
+		bytesSent = send(ConnectionSocket, rawData, bytes, 0);
+		if (bytesSent == SOCKET_ERROR) {
+			std::cerr << "TCP send failure: " << WSAGetLastError() << std::endl;
+			return;
+		}
+	}
+	else if (connectionType == UDP) {
+		bytesSent = sendto(ConnectionSocket, rawData, bytes, 0, (sockaddr*)&SvrAddr, sizeof(SvrAddr));
+		if (bytesSent == SOCKET_ERROR) {
+			std::cerr << "UDP send failure: " << WSAGetLastError() << std::endl;
+			return;
+		}
+	}
+	std::cout << "Sent " << bytesSent << " bytes of data" << std::endl;
 }
 
 void MySocket::SetIPAddr(std::string ip) {
-    if (bTCPConnect || (mySocket == SERVER && WelcomeSocket != INVALID_SOCKET)) {
-        std::cerr << "Cannot change IP address when connection is active" << std::endl;
-        return;
-    }
-    struct in_addr tempAddr;
-    if (InetPtonA(AF_INET, ip.c_str(), &tempAddr) != 1) {
-        std::cerr << "Invalid IP address format: " << ip << std::endl;
-        return;
-    }
-    IPAddr = ip;
-    SvrAddr.sin_family = AF_INET;
-    SvrAddr.sin_addr = tempAddr;
+	if (bTCPConnect || (mySocket == SERVER && connectionType == TCP && WelcomeSocket != INVALID_SOCKET)) {
+		std::cerr << "Cannot change IP address, already connected" << std::endl;
+		return;
+	}
+	unsigned long addr = inet_addr(ip.c_str());
+	if (addr == INADDR_NONE) {  // Note: INADDR_NONE may indicate an invalid IP on many systems.
+		std::cerr << "Invalid IP address provided" << std::endl;
+		return;
+	}
+	IPAddr = ip;
+	SvrAddr.sin_addr.s_addr = inet_addr(IPAddr.c_str());
+	std::cout << "IP address changed to: " << IPAddr << std::endl;
 }
 
 void MySocket::SetPort(int port) {
-    if (bTCPConnect || (mySocket == SERVER && WelcomeSocket != INVALID_SOCKET)) {
-        std::cerr << "Cannot change port number when connection is active" << std::endl;
-        return;
-    }
-    Port = port;
-    SvrAddr.sin_port = htons(Port);
+	if (bTCPConnect || (mySocket == SERVER && connectionType == TCP && WelcomeSocket != INVALID_SOCKET)) {
+		std::cerr << "Cannot change port, already connected" << std::endl;
+		return;
+	}
+	Port = port;
+	SvrAddr.sin_port = htons(Port);
+	std::cout << "Port changed to " << Port << std::endl;
 }
 
 void MySocket::SetType(SocketType type) {
-    if (bTCPConnect || (mySocket == SERVER && WelcomeSocket != INVALID_SOCKET)) {
-        std::cerr << "Cannot change socket type when connection is active" << std::endl;
-        return;
-    }
-    mySocket = type;
+	if (bTCPConnect || (mySocket == SERVER && connectionType == TCP && WelcomeSocket != INVALID_SOCKET)) {
+		std::cerr << "Cannot change type, already connected" << std::endl;
+		return;
+	}
+	mySocket = type;
+	std::cout << "Socket type changed to " << mySocket << std::endl;
 }
 
 int MySocket::GetPort() {
-    return Port;
+	return Port;
 }
 
 SocketType MySocket::GetType() {
-    return mySocket;
+	return mySocket;
 }
 
 std::string MySocket::GetIPAddr() {
-    return IPAddr;
+	return IPAddr;
+}
+
+int MySocket::GetData(char* rawData) {
+	memset(Buffer, 0, MaxSize);
+	int bytesReceived = 0;
+	if (connectionType == TCP) {
+		if (!bTCPConnect) {
+			std::cerr << "No TCP connection established for receiving data" << std::endl;
+			return -1;
+		}
+		bytesReceived = recv(ConnectionSocket, Buffer, MaxSize, 0);
+		if (bytesReceived == SOCKET_ERROR) {
+			std::cerr << "TCP receive failure: " << WSAGetLastError() << std::endl;
+			return -1;
+		}
+	}
+	else if (connectionType == UDP) {
+		int addrlen = sizeof(SvrAddr);
+		bytesReceived = recvfrom(ConnectionSocket, Buffer, MaxSize, 0, (sockaddr*)&SvrAddr, &addrlen);
+		if (bytesReceived == SOCKET_ERROR) {
+			std::cerr << "UDP receive failed: " << WSAGetLastError() << std::endl;
+			return -1;
+		}
+	}
+	memcpy(rawData, Buffer, bytesReceived);
+	std::cout << "Received " << bytesReceived << " bytes of data." << std::endl;
+	return bytesReceived;
 }

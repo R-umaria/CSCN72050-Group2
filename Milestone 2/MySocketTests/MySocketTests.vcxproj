@@ -99,7 +99,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>C:\Users\Rishi\source\repos\Mobile and Networked Systems\Robot__Simulator\Milestone1\PktDefProject\Milestone 2\Milestone 2\x64\Debug;$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Conestoga\Year 2\Term 2\Mobile and Networked Systems\GroupProject\Milestone 1\Milestone 2\Milestone 2\x64\Debug;C:\Users\Rishi\source\repos\Mobile and Networked Systems\Robot__Simulator\Milestone1\PktDefProject\Milestone 2\Milestone 2\x64\Debug;$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>MySocket.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
