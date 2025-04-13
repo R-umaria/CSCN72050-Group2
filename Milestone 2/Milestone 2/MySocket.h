@@ -15,33 +15,32 @@ const int DEFAULT_SIZE = 1024;  // Default buffer size
 
 class MySocket {
 private:
-    char* Buffer;               // dynamically allocated raw buffer space
+    char* Buffer;               // dynamically allocated raw buffer space for communication activities
     SOCKET WelcomeSocket;       // used by MySocket configured as TCP/IP Server
     SOCKET ConnectionSocket;    // used for client/server communications (TCP & UDP)
     struct sockaddr_in SvrAddr; // store connection information
-    SocketType mySocket;        // type of socket (CLIENT/SERVER)
-    std::string IPAddr;         // IPv4 IP Address string
-    int Port;                   // Port number to be used
+    SocketType mySocket;        // holds type of socket (CLIENT/SERVER)
+    std::string IPAddr;         // holds IPv4 IP Address string
+    int Port;                   // port number to be used
     ConnectionType connectionType; // TCP or UDP
-    bool bTCPConnect;           // flag to determine if a connection is established
-    int MaxSize;                // max bytes allocated to Buffer
+    bool bTCPConnect;           // flag to determine if a TCP connection is established
+    int MaxSize;                // maximum bytes allocated to the Buffer
+
+    // Static variable to count active socket instances.
+    static int instanceCount;
 
 public:
-    // Constructor/Destructor
     MySocket(SocketType, std::string, unsigned int, ConnectionType, unsigned int);
     ~MySocket();
 
-    // Member Functions
     void ConnectTCP();
     void DisconnectTCP();
     void SendData(const char*, int);
 
-    // Setters (with connection-state checks)
     void SetIPAddr(std::string);
     void SetPort(int);
     void SetType(SocketType);
 
-    // Getters
     int GetPort();
     SocketType GetType();
     std::string GetIPAddr();
