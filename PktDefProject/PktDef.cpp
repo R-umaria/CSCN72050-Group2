@@ -49,27 +49,6 @@ PktDef::~PktDef() {
     }
 }
 
-// SetCmd: Sets the command flag in the header based on the provided CmdType.
-// Clears any previously set flags.
-//void PktDef::SetCmd(CmdType cmd) {
-//    // Clear all command flag bits (padding will remain 0)
-//    packet.header.CmdFlags = 0;
-//    switch (cmd) {
-//    case DRIVE:
-//        packet.header.Drive = 1;
-//        break;
-//    case SLEEP:
-//        packet.header.Sleep = 1;
-//        break;
-//    case RESPONSE:
-//        packet.header.Status = 1;
-//        break;
-//    }
-//    //
-//    
-//    //
-//}
-
 // Sets command type
 void PktDef::SetCmd(CmdType cmdType) {
     packet.header.Drive = false;
