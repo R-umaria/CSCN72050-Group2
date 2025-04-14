@@ -1,11 +1,194 @@
 ﻿<!DOCTYPE html>
-
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <title></title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Robot Command & Control GUI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        .panel {
+            background-color: #fff;
+            padding: 15px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        label {
+            display: inline-block;
+            width: 150px;
+            margin-bottom: 5px;
+        }
+
+        input, select {
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        #response-log {
+            width: 100%;
+            max-width: 800px;
+            height: 150px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: Consolas, monospace;
+            background-color: #eef;
+            resize: none;
+        }
+    </style>
 </head>
 <body>
+    <h1>Robot Command & Control GUI</h1>
 
+    <!-- Connect Panel -->
+    <div id="connect-panel" class="panel">
+        <h2>Connect to Robot</h2>
+        <form id="connect-form">
+            <div>
+                <label for="robot-ip">Robot IP Address:</label>
+                <input type="text" id="robot-ip" name="robotIp" placeholder="e.g., 192.168.1.100" required>
+            </div>
+            <div>
+                <label for="robot-port">Port Number:</label>
+                <input type="number" id="robot-port" name="robotPort" placeholder="e.g., 8080" required>
+            </div>
+            <button type="submit">Connect</button>
+        </form>
+    </div>
+
+    <!-- Telecommand Panel -->
+    <div id="telecommand-panel" class="panel">
+        <h2>Send Telecommand</h2>
+        <form id="telecommand-form">
+            <div>
+                <label for="command-type">Command Type:</label>
+                <select id="command-type" name="commandType">
+                    <option value="drive">Drive</option>
+                    <option value="sleep">Sleep</option>
+                </select>
+            </div>
+            <div id="drive-params">
+                <div>
+                    <label for="direction">Direction:</label>
+                    <input type="text" id="direction" name="direction" placeholder="e.g., forward, backward" required>
+                </div>
+                <div>
+                    <label for="speed">Speed:</label>
+                    <input type="number" id="speed" name="speed" placeholder="e.g., 5" required>
+                </div>
+                <div>
+                    <label for="time">Time (sec):</label>
+                    <input type="number" id="time" name="time" placeholder="e.g., 10" required>
+                </div>
+            </div>
+            <button type="submit">Send Telecommand</button>
+        </form>
+    </div>
+
+    <!-- Telemetry Panel -->
+    <div id="telemetry-panel" class="panel">
+        <h2>Telemetry</h2>
+        <button id="request-telemetry">Request Telemetry</button>
+    </div>
+
+    <!-- Response Log Panel -->
+    <div id="response-panel" class="panel">
+        <h2>Response Log</h2>
+        <textarea id="response-log" readonly></textarea>
+    </div>
+
+    <script>
+        // Utility function to append messages to the response log
+        function logMessage(message) {
+            const logArea = document.getElementById('response-log');
+            logArea.value += message + "\n";
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // Handle connection form submission
+        document.getElementById('connect-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const ip = document.getElementById('robot-ip').value;
+            const port = document.getElementById('robot-port').value;
+            // Send POST request to /connect with robot IP and port in JSON
+            fetch('/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ip: ip, port: port })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    logMessage("Connect Response: " + JSON.stringify(data));
+                })
+                .catch(error => {
+                    logMessage("Connect Error: " + error);
+                });
+        });
+
+        // Toggle drive parameters based on command type selection
+        document.getElementById('command-type').addEventListener('change', function () {
+            if (this.value === 'sleep') {
+                document.getElementById('drive-params').style.display = 'none';
+            } else {
+                document.getElementById('drive-params').style.display = 'block';
+            }
+        });
+
+        // Handle telecommand form submission
+        document.getElementById('telecommand-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const commandType = document.getElementById('command-type').value;
+            let payload = { command: commandType };
+
+            // Only include these fields when the Drive command is selected
+            if (commandType === 'drive') {
+                payload.direction = document.getElementById('direction').value;
+                payload.speed = parseFloat(document.getElementById('speed').value);
+                payload.time = parseFloat(document.getElementById('time').value);
+            }
+
+            // Send PUT request to /telecommand/ with the appropriate payload
+            fetch('/telecommand/', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    logMessage("Telecommand Response: " + JSON.stringify(data));
+                })
+                .catch(error => {
+                    logMessage("Telecommand Error: " + error);
+                });
+        });
+
+        // Handle Telemetry Request button click using GET to /telementry_request/
+        document.getElementById('request-telemetry').addEventListener('click', function () {
+            fetch('/telementry_request/')
+                .then(response => response.json())
+                .then(data => {
+                    logMessage("Telemetry Response: " + JSON.stringify(data));
+                })
+                .catch(error => {
+                    logMessage("Telemetry Request Error: " + error);
+                });
+        });
+    </script>
 </body>
 </html>

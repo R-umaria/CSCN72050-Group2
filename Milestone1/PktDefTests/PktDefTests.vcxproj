@@ -99,7 +99,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>C:\Conestoga\Year 2\Term 2\Mobile and Networked Systems\GroupProject\Milestone 1\PktDefProject\x64\Debug;$(VCInstallDir)UnitTest\lib;C:\Users\Rishi\source\repos\Mobile and Networked Systems\Robot__Simulator\RobotController\Milestone1\PktDefProject\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Conestoga\Year 2\Term 2\Mobile and Networked Systems\GroupProject\Milestone 1\Milestone1\PktDefProject\x64\Debug;$(VCInstallDir)UnitTest\lib;C:\Users\Rishi\source\repos\Mobile and Networked Systems\Robot__Simulator\RobotController\Milestone1\PktDefProject\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>PktDef.obj;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
