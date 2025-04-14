@@ -25,7 +25,7 @@ int main()
 		res.end();
 	});
 
-	CROW_ROUTE(app, "/<string>")
+	CROW_ROUTE(app, "/connect/<string>/<int>")	//only POST
 		([](const crow::request& req, crow::response& res, string fileName) {
 		ifstream in("../public/" + fileName, ifstream::in);
 		if (in) {
@@ -42,7 +42,7 @@ int main()
 		res.end();
 			});
 
-	CROW_ROUTE(app, "/images/<string>")
+	CROW_ROUTE(app, "/telecommand/")	//only PUT
 		([](const crow::request& req, crow::response& res, string fileName) {
 		ifstream in("../public/images/" + fileName, ifstream::in);
 		if (in) {
@@ -60,7 +60,7 @@ int main()
 		res.end();
 			});
 
-	CROW_ROUTE(app, "/scripts/<string>")
+	CROW_ROUTE(app, "/telemetry_request/")	//only GET
 		([](const crow::request& req, crow::response& res, string fileName) {
 		ifstream in("../public/scripts/" + fileName, ifstream::in);
 		if (in) {
@@ -77,23 +77,8 @@ int main()
 		res.end();
 			});
 
-	CROW_ROUTE(app, "/styles/<string>")
-		([](const crow::request& req, crow::response& res, string fileName) {
-		ifstream in("../public/styles/" + fileName, ifstream::in);
-		if (in) {
-			ostringstream contents;
-			contents << in.rdbuf();
-			in.close();
-
-			res.set_header("Content-Type", "text/css");
-			res.write(contents.str());
-		}
-		else {
-			res.write("Not Found");
-		}
-		res.end();
-			});
-
+	
+	//example
 	CROW_ROUTE(app, "/add-brick/<int>/<string>").methods(crow::HTTPMethod::Post,
 		crow::HTTPMethod::Get, crow::HTTPMethod::Put)
 		([](const crow::request& req, crow::response& res, int quantity, std::string product) {
@@ -119,47 +104,6 @@ int main()
 		}
 		res.end();
 			});
-
-	CROW_ROUTE(app, "/checkout").methods(crow::HTTPMethod::Post,
-		crow::HTTPMethod::Get, crow::HTTPMethod::Put)
-		([](const crow::request& req, crow::response& res) {
-
-		ifstream in("../public/checkout.html", ifstream::in);
-		if (in) {
-			ostringstream contents;
-			contents << in.rdbuf();
-			in.close();
-
-			res.set_header("Content-Type", "text/html");
-			res.write(contents.str());
-			res.end();
-		}
-		else {
-			res.code = 404;
-			res.write("Not Found");
-			res.end();
-		}
-			});
-
-	CROW_ROUTE(app, "/checkout/<string>/<string>").methods(crow::HTTPMethod::Get)
-		([](const crow::request& req, crow::response& res, std::string user, std::string pass) {
-
-		ifstream in("../public/checkout.html", ifstream::in);
-		if (in) {
-			ostringstream contents;
-			contents << in.rdbuf();
-			in.close();
-
-			res.set_header("Content-Type", "text/html");
-			res.write(contents.str());
-		}
-		else {
-			res.code = 404;
-			res.write("Not Found");
-		}
-		res.end();
-			});
-
 
 		app.port(23500).multithreaded().run();
 	return 0;
