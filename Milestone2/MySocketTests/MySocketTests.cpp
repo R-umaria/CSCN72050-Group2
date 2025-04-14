@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "CppUnitTest.h"
-#include "../Milestone 2/MySocket.h"
+#include "../Milestone2/MySocket.h"
 #include <thread>
 #include <chrono>
 #include <string>

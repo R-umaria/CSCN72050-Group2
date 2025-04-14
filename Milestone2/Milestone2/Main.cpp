@@ -18,7 +18,7 @@ void InitializeWinsock() {
 }
 
 int main(int argc, char* argv[]) {
-	InitializeWinsock();
+    InitializeWinsock();
     // Simple menu to choose the role.
     cout << "Select role:" << endl;
     cout << "1. Server" << endl;

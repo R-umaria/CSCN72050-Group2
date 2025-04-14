@@ -1,8 +1,9 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35806.99
+VisualStudioVersion = 17.13.35806.99 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Milestone 2", "Milestone 2\Milestone 2.vcxproj", "{A301A793-EE77-48F6-9A3F-F25E0EB01F94}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Milestone2", "Milestone2\Milestone2.vcxproj", "{684D6D4E-239F-4CFF-A146-51CB428533DC}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MySocketTests", "MySocketTests\MySocketTests.vcxproj", "{2FB9582C-0513-56C4-4126-9C701E1B2892}"
 EndProject
@@ -14,14 +15,14 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A301A793-EE77-48F6-9A3F-F25E0EB01F94}.Debug|x64.ActiveCfg = Debug|x64
-		{A301A793-EE77-48F6-9A3F-F25E0EB01F94}.Debug|x64.Build.0 = Debug|x64
-		{A301A793-EE77-48F6-9A3F-F25E0EB01F94}.Debug|x86.ActiveCfg = Debug|Win32
-		{A301A793-EE77-48F6-9A3F-F25E0EB01F94}.Debug|x86.Build.0 = Debug|Win32
-		{A301A793-EE77-48F6-9A3F-F25E0EB01F94}.Release|x64.ActiveCfg = Release|x64
-		{A301A793-EE77-48F6-9A3F-F25E0EB01F94}.Release|x64.Build.0 = Release|x64
-		{A301A793-EE77-48F6-9A3F-F25E0EB01F94}.Release|x86.ActiveCfg = Release|Win32
-		{A301A793-EE77-48F6-9A3F-F25E0EB01F94}.Release|x86.Build.0 = Release|Win32
+		{684D6D4E-239F-4CFF-A146-51CB428533DC}.Debug|x64.ActiveCfg = Debug|x64
+		{684D6D4E-239F-4CFF-A146-51CB428533DC}.Debug|x64.Build.0 = Debug|x64
+		{684D6D4E-239F-4CFF-A146-51CB428533DC}.Debug|x86.ActiveCfg = Debug|Win32
+		{684D6D4E-239F-4CFF-A146-51CB428533DC}.Debug|x86.Build.0 = Debug|Win32
+		{684D6D4E-239F-4CFF-A146-51CB428533DC}.Release|x64.ActiveCfg = Release|x64
+		{684D6D4E-239F-4CFF-A146-51CB428533DC}.Release|x64.Build.0 = Release|x64
+		{684D6D4E-239F-4CFF-A146-51CB428533DC}.Release|x86.ActiveCfg = Release|Win32
+		{684D6D4E-239F-4CFF-A146-51CB428533DC}.Release|x86.Build.0 = Release|Win32
 		{2FB9582C-0513-56C4-4126-9C701E1B2892}.Debug|x64.ActiveCfg = Debug|x64
 		{2FB9582C-0513-56C4-4126-9C701E1B2892}.Debug|x64.Build.0 = Debug|x64
 		{2FB9582C-0513-56C4-4126-9C701E1B2892}.Debug|x86.ActiveCfg = Debug|Win32
@@ -35,6 +36,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {6F6055EB-EB16-4869-95B2-5E753B0A951F}
+		SolutionGuid = {8F7C2457-3D7A-44D8-A915-AAECFC032C44}
 	EndGlobalSection
 EndGlobal
