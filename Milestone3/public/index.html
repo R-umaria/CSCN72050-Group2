@@ -19,18 +19,21 @@
             border: 1px solid #ddd;
             border-radius: 5px;
         }
-        /* Connection panel with a narrower container */
+        /* Connection panel overrides for a narrower container */
         .container {
             max-width: 400px;
         }
+
         h1, h2 {
             text-align: center;
             color: #333;
         }
+        /* Label and Input styles */
         label {
             display: block;
             margin: 10px 0 5px;
         }
+
         input[type="text"],
         input[type="number"],
         select {
@@ -51,18 +54,30 @@
             border-radius: 3px;
             margin-top: 10px;
         }
+
             a.connect-btn:hover {
                 background-color: #218838;
             }
-        /* Button group styling */
+        /* New command button styling */
+        a.command-btn {
+            display: inline-block;
+            padding: 10px 0;
+            text-align: center;
+            text-decoration: none;
+            background-color: #28a745;
+            color: #fff;
+            border-radius: 3px;
+            margin: 5px;
+            width: 30%; /* Adjust width as needed */
+        }
+
+            a.command-btn:hover {
+                background-color: #218838;
+            }
+        /* Button group and response log styling */
         .btn-group {
             text-align: center;
             margin-top: 10px;
-        }
-        button {
-            cursor: pointer;
-            padding: 10px 15px;
-            margin: 5px;
         }
         /* Response log styling */
         #response-log {
@@ -124,9 +139,9 @@
             </div>
             <!-- Button Group -->
             <div class="btn-group">
-                <button type="button" id="drive-button">Drive</button>
-                <button type="button" id="sleep-button">Sleep</button>
-                <button type="button" id="telemetry-button">Telemetry</button>
+                <a href="#" class="command-btn" onclick="Drive(); return false;">Drive</a>
+                <a href="#" class="command-btn" onclick="Sleep(); return false;">Sleep</a>
+                <a href="#" class="command-btn" onclick="Telemetry(); return false;">Telemetry</a>
             </div>
         </form>
     </div>
@@ -138,72 +153,63 @@
     </div>
 
     <script>
-        // Connection functionality
+        // Connection functionality:
         function Connect() {
             var action = "/connect/";
+
+            //get input values
             var ip = document.getElementById('ip').value.trim();
             var port = document.getElementById('port').value.trim();
+
+            //construct the new url
             action = action + ip + '/' + port;
+
+            //update action
             document.getElementById('ConnectForm').action = action;
+
+            //submit
             document.getElementById('ConnectForm').submit();
         }
 
-        // Utility function to log messages
+        function Drive() {
+            var action = "/telecommand/";
+
+            //get input values
+            var dir = document.getElementById('direction').value;
+            var dur = document.getElementById('duration').value;
+            var sp = document.getElementById('speed').value;
+
+            action = action + dir + "/" + dur + "/" + sp;
+
+            fetch(action, { method: "PUT" })
+                .then(response => response.text())
+                .then(data => {
+                    var logArea = document.getElementById('response-log');
+                    logArea.value += data + "\n";
+                    logArea.scrollTop = logArea.scrollHeight;
+                });
+
+            //document.getElementById('robotForm').action = action;
+            //document.getElementById('robotForm').submit();
+        } 
+
+        function Sleep() {
+
+        }
+
+        function Response() {
+
+        }
+
+        // Utility: log messages to the response log.
         function logMessage(message) {
             const logArea = document.getElementById('response-log');
             logArea.value += message + "\n";
             logArea.scrollTop = logArea.scrollHeight;
         }
 
-        // Telecommand: Drive button sends a PUT request with JSON payload
-        document.getElementById('drive-button').addEventListener('click', function () {
-            const payload = {
-                command: "drive",
-                direction: document.getElementById('direction').value,
-                speed: document.getElementById('speed').value,
-                duration: document.getElementById('duration').value
-            };
-            fetch('/telecommand/', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-                .then(response => response.json())
-                .then(data => {
-                    logMessage("Drive Response: " + JSON.stringify(data));
-                })
-                .catch(error => {
-                    logMessage("Drive Error: " + error);
-                });
-        });
 
-        // Telecommand: Sleep button sends a PUT request with a sleep command.
-        document.getElementById('sleep-button').addEventListener('click', function () {
-            fetch('/telecommand/', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command: "sleep" })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    logMessage("Sleep Response: " + JSON.stringify(data));
-                })
-                .catch(error => {
-                    logMessage("Sleep Error: " + error);
-                });
-        });
 
-        // Telemetry: Sends a GET request to retrieve telemetry data.
-        document.getElementById('telemetry-button').addEventListener('click', function () {
-            fetch('/telementry_request/')
-                .then(response => response.json())
-                .then(data => {
-                    logMessage("Telemetry Response: " + JSON.stringify(data));
-                })
-                .catch(error => {
-                    logMessage("Telemetry Error: " + error);
-                });
-        });
     </script>
 </body>
 </html>

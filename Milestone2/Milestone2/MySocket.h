@@ -63,6 +63,7 @@ public:
     bool sendPacket(const std::string& packet);
     // Receives data and returns it as a std::string.
     std::string receiveResponse();
+    int GetUDPSocket();
 };
 
 #endif // MYSOCKET_H

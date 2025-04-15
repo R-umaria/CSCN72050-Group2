@@ -140,10 +140,19 @@ void MySocket::DisconnectTCP() {
 
 // Sends raw data over the socket.
 void MySocket::SendData(const char* rawData, int bytes) {
-    if (rawData == nullptr || bytes > MaxSize || bytes <= 0) {
-        std::cerr << "Invalid data or byte count exceeds buffer size" << std::endl;
+    if (rawData == nullptr) {
+        std::cerr << "SendData error: rawData is nullptr." << std::endl;
         return;
     }
+    if (bytes > MaxSize) {
+        std::cerr << "SendData error: bytes (" << bytes << ") > MaxSize (" << MaxSize << ")." << std::endl;
+        return;
+    }
+    if (bytes <= 0) {
+        std::cerr << "SendData error: bytes is non-positive (" << bytes << ")." << std::endl;
+        return;
+    }
+    
     int bytesSent = 0;
     if (connectionType == TCP) {
         if (!bTCPConnect) {
@@ -275,4 +284,8 @@ std::string MySocket::receiveResponse() {
         return std::string(recvBuffer, bytesReceived);
     }
     return "";
+}
+
+int MySocket::GetUDPSocket() {
+    return ConnectionSocket;
 }
