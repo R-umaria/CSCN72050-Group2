@@ -25,27 +25,29 @@ int main()
 		res.end();
 	});
 
-	CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::Post)	//only POST
-		([](const crow::request& req, crow::response& res, string fileName) {
-		ifstream in("../public/connect.html", ifstream::in);
-		if (in) {
-			ostringstream contents;
-			contents << in.rdbuf();
-			in.close();
-
-			res.set_header("Content-Type", "text/html");
-			res.write(contents.str());
+	CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::POST)	//only POST
+		([](const crow::request& req, crow::response& res, string ip, int port) {
+		
+		if (!robotSocket) {
+			MySocket robotSocket(CLIENT, ip, port, UDP);
 		}
 		else {
-			res.write("Not Found");
+			robotSocket->SetIPAddr(ip);
+			robotSocket->SetPort(port);
 		}
-		/////////
-			//code for socket
-		/////////
+
+		ostringstream contents;
+		contents << in.rdbuf();
+		in.close();
+
+		res.set_header("Content-Type", "text/html");
+		res.write(contents.str());
+
+		res.write("Not Found");
 		res.end();
 			});
 
-	CROW_ROUTE(app, "/telecommand/")	//only PUT
+	CROW_ROUTE(app, "/telecommand/").methods(crow::HTTPMethod::PUT)	//only PUT
 		([](const crow::request& req, crow::response& res, string fileName) {
 		ifstream in("../public/images/" + fileName, ifstream::in);
 		if (in) {
@@ -63,7 +65,7 @@ int main()
 		res.end();
 			});
 
-	CROW_ROUTE(app, "/telemetry_request/")	//only GET
+	CROW_ROUTE(app, "/telemetry_request/").methods(crow::HTTPMethod::GET)	//only GET
 		([](const crow::request& req, crow::response& res, string fileName) {
 		ifstream in("../public/scripts/" + fileName, ifstream::in);
 		if (in) {

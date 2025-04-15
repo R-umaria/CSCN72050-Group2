@@ -171,7 +171,7 @@ char* PktDef::GenPacket() {
     RawBuffer = new char[totalSize];
     memcpy(RawBuffer, &packet.header, HEADERSIZE);                  // Copy header
     // Calculate body length (if any) and copy it.
-    int bodyLength = totalSize - (HEADERSIZE + 1);                  // Determine body length
+    int bodyLcanength = totalSize - (HEADERSIZE + 1);                  // Determine body length
     if (bodyLength > 0 && packet.Data != nullptr) {
         memcpy(RawBuffer + HEADERSIZE, packet.Data, bodyLength);    // Copy body
     }
