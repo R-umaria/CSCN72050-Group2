@@ -102,6 +102,10 @@ public:
     static std::string createSleepCommand();
     // Creates a packet to request telemetry data (using the RESPONSE flag).
     static std::string createTelemetryRequest();
+    
+    // Debug function to print internal packet info
+    std::string Debug() const;
+
 };
 
 #endif // PKTDEF_H

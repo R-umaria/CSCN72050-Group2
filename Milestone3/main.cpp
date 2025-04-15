@@ -1,4 +1,4 @@
-// main.cpp - Fully Updated Version
+// main.cpp - Updated with Flexible Telemetry Parsing & Debugging
 #define CROW_MAIN
 #include "crow_all.h"
 #include <fstream>
@@ -107,28 +107,59 @@ int main() {
         pkt.SetBodyData(nullptr, 0);
         char* raw = pkt.GenPacket();
         client.SendData(raw, pkt.GetLength());
-
+    
         char buff[1024];
         int bytesReceived = client.GetData(buff);
-        PktDef resp(buff);
-        if (bytesReceived > 0 && resp.GetAck() && resp.GetCmd() == PktDef::RESPONSE) {
-            unsigned char* data = reinterpret_cast<unsigned char*>(resp.GetBodyData());
+        try {
+            PktDef resp(buff);
             std::ostringstream os;
             os << "Telemetry Response:\n";
-            os << "LastPktCounter: " << (data[0] << 8 | data[1]) << "\n";
-            os << "CurrentGrade: " << (data[2] << 8 | data[3]) << "\n";
-            os << "HitCount: " << static_cast<int>(data[4]) << "\n";
-            os << "LastCmd: " << static_cast<int>(data[5]) << "\n";
-            os << "LastCmdValue: " << static_cast<int>(data[6]) << "\n";
-            os << "LastCmdSpeed: " << static_cast<int>(data[7]) << "\n";
+            os << resp.Debug();  // includes length, flags, CRC, etc.
+    
+            if (!resp.GetAck()) {
+                res.code = 500;
+                res.write("Telemetry packet was not acknowledged.\n");
+                res.end();
+                return;
+            }
+    
+            char* rawBody = resp.GetBodyData();
+            int bodyLen = resp.GetLength() - HEADERSIZE - 1;
+    
+            if (rawBody == nullptr || bodyLen <= 0) {
+                os << "\nReceived telemetry ACK, but no body data provided.\n";
+                res.write(os.str());
+                res.end();
+                return;
+            }
+    
+            unsigned char* data = reinterpret_cast<unsigned char*>(rawBody);
+            for (int i = 0; i < bodyLen; ++i) {
+                os << "Byte[" << i << "] = " << std::hex << std::showbase << static_cast<int>(data[i]) << "\n";
+            }
+    
+            if (bodyLen >= 8) {
+                os << "\nParsed Fields:\n";
+                os << "LastPktCounter: " << (data[0] << 8 | data[1]) << "\n";
+                os << "CurrentGrade: " << (data[2] << 8 | data[3]) << "\n";
+                os << "HitCount: " << static_cast<int>(data[4]) << "\n";
+                os << "LastCmd: " << static_cast<int>(data[5]) << "\n";
+                os << "LastCmdValue: " << static_cast<int>(data[6]) << "\n";
+                os << "LastCmdSpeed: " << static_cast<int>(data[7]) << "\n";
+            } else {
+                os << "\nTelemetry structure incomplete: only " << bodyLen << " bytes.\n";
+            }
+    
             res.set_header("Content-Type", "text/plain");
             res.write(os.str());
-        } else {
+        } catch (...) {
             res.code = 500;
-            res.write("Telemetry not acknowledged or invalid.\n");
+            res.write("Error parsing telemetry response.\n");
         }
+    
         res.end();
     });
+    
 
     app.port(23500).multithreaded().run();
     return 0;
