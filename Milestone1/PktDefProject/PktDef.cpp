@@ -2,6 +2,7 @@
 
 #include "PktDef.h"
 #include <cstring>   // For memcpy
+#include <sstream>   // update from milesone3
 
 // Default constructor
 PktDef::PktDef() {
@@ -179,4 +180,50 @@ char* PktDef::GenPacket() {
     CalcCRC();
     RawBuffer[totalSize - 1] = packet.CRC;  // Add CRC to packet
     return RawBuffer;
+}
+
+
+// updates from Milestone3
+// 
+// New static functions for Milestone 3:
+
+std::string PktDef::createDriveCommand(int direction, int speed, int duration) {
+    PktDef pkt;
+    pkt.SetCmd(DRIVE);
+    pkt.SetPktCount(1);  // You may wish to use an incremental counter.
+
+    // Prepare drive command body using DriveBody.
+    DriveBody drive;
+    drive.Direction = static_cast<unsigned char>(direction);
+    drive.Duration = static_cast<unsigned char>(duration);
+    drive.Speed = static_cast<unsigned char>(speed);
+
+    // Copy drive body to a temporary buffer.
+    char driveData[sizeof(DriveBody)];
+    std::memcpy(driveData, &drive, sizeof(DriveBody));
+    pkt.SetBodyData(driveData, sizeof(DriveBody));
+
+    // Generate the complete packet.
+    char* raw = pkt.GenPacket();
+    return std::string(raw, pkt.GetLength());
+}
+
+std::string PktDef::createSleepCommand() {
+    PktDef pkt;
+    pkt.SetCmd(SLEEP);
+    pkt.SetPktCount(1);
+    // No body data for Sleep command.
+    pkt.SetBodyData(nullptr, 0);
+    char* raw = pkt.GenPacket();
+    return std::string(raw, pkt.GetLength());
+}
+
+std::string PktDef::createTelemetryRequest() {
+    PktDef pkt;
+    // For telemetry requests, we use the RESPONSE flag.
+    pkt.SetCmd(RESPONSE);
+    pkt.SetPktCount(1);
+    pkt.SetBodyData(nullptr, 0);
+    char* raw = pkt.GenPacket();
+    return std::string(raw, pkt.GetLength());
 }

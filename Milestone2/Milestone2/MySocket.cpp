@@ -248,3 +248,35 @@ int MySocket::GetData(char* rawData) {
 	std::cout << "Received " << bytesReceived << " bytes of data." << std::endl;
 	return bytesReceived;
 }
+
+// updates from Milestone3
+// New function: Configure the socket.
+bool MySocket::configure(const std::string& ip, int port) {
+	// Do not allow changes if a connection is already established.
+	if (bTCPConnect) {
+		std::cerr << "Socket already connected." << std::endl;
+		return false;
+	}
+	SetIPAddr(ip);
+	SetPort(port);
+	return true;
+}
+
+// New function: Send a string packet over the socket.
+bool MySocket::sendPacket(const std::string& packet) {
+	// Use the existing SendData method.
+	SendData(packet.c_str(), packet.size());
+	// In production, you’d check the return value and handle errors.
+	return true;
+}
+
+// New function: Receive a response from the socket.
+std::string MySocket::receiveResponse() {
+	// Use a fixed-size buffer (you might wish to improve this).
+	char recvBuffer[DEFAULT_SIZE];
+	int bytesReceived = GetData(recvBuffer);
+	if (bytesReceived > 0) {
+		return std::string(recvBuffer, bytesReceived);
+	}
+	return "";
+}

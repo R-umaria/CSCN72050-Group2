@@ -64,6 +64,16 @@ public:
 	// of bytes written. this function work with TCP & UDP
 
 
+	// updates from milestone3
+	//
+	// Configures the socket by setting the IP address and port.
+	bool configure(const std::string& ip, int port);
+	// Sends the given packet (as a string) using SendData.
+	bool sendPacket(const std::string& packet);
+	// Receives data into a buffer and returns it as a std::string.
+	std::string receiveResponse();
+
+
 };
 
 #endif

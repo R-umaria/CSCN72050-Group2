@@ -91,6 +91,17 @@ public:
 
     // Generates a complete serialized packet in RawBuffer.
     char* GenPacket();
+
+
+    //updates from milestone3
+    // 
+    // Generates and returns a complete serialized packet as a std::string.
+    // For drive commands, body data is constructed from a DriveBody.
+    static std::string createDriveCommand(int direction, int speed, int duration);
+    // Creates a packet for a sleep command (no body data).
+    static std::string createSleepCommand();
+    // Creates a packet to request telemetry data (using the RESPONSE flag).
+    static std::string createTelemetryRequest();
 };
 
 #endif // PKTDEF_H
