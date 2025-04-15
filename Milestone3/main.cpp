@@ -3,12 +3,12 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include "../Milestone1/PktDefProject/PktDef.h"      // Milestone 1: PktDef header.
-#include "../Milestone2/Milestone2/MySocket.h"          // Milestone 2: MySocket header.
+#include "../Milestone1/PktDefProject/PktDef.h"      // Milestone 1: Packet definitions.
+#include "../Milestone2/Milestone2/MySocket.h"          // Milestone 2: Socket communication.
 
 // Create a global MySocket instance in UDP client mode.
-// Dummy initial values; these will be updated by the /connect route.
-MySocket mySocket(CLIENT, "127.0.0.1", 0, UDP, DEFAULT_SIZE);
+// Dummy initial values ("127.0.0.1", port 0) will be updated via the /connect endpoint.
+MySocket client(CLIENT, "127.0.0.1", 0, UDP, DEFAULT_SIZE);
 
 int main()
 {
@@ -32,7 +32,7 @@ int main()
     CROW_ROUTE(app, "/connect/<string>/<int>")
     .methods(crow::HTTPMethod::Post)
     ([](const crow::request& req, crow::response& res, std::string robotIP, int robotPort) {
-        if (mySocket.configure(robotIP, robotPort)) {
+        if (client.configure(robotIP, robotPort)) {
             crow::json::wvalue response;
             response["status"] = "Connected";
             response["robotIP"] = robotIP;
@@ -47,11 +47,10 @@ int main()
         res.end();
     });
 
-    // Telecommand Route: Accepts a PUT request with a JSON payload.
-    // Expect payload like:
+    // Telecommand Route: Accepts PUT requests with JSON payload.
+    // For drive commands, expected payload:
     // { "command": "drive", "direction": 1, "speed": 90, "duration": 10 }
-    // or for sleep:
-    // { "command": "sleep" }
+    // For sleep commands: { "command": "sleep" }
     CROW_ROUTE(app, "/telecommand/")
     .methods(crow::HTTPMethod::Put)
     ([](const crow::request& req, crow::response& res) {
@@ -79,8 +78,15 @@ int main()
             res.end();
             return;
         }
-        if (mySocket.sendPacket(packet)) {
-            std::string ack = mySocket.receiveResponse();
+        // Debug: print packet in hexadecimal.
+        std::cout << "Sending packet (hex): ";
+        for (unsigned char c : packet) {
+            std::cout << std::hex << ((int)c & 0xff) << " ";
+        }
+        std::cout << std::dec << std::endl;
+        
+        if (client.sendPacket(packet)) {
+            std::string ack = client.receiveResponse();
             crow::json::wvalue response;
             response["status"] = "Command sent";
             response["ack"] = ack;
@@ -94,14 +100,19 @@ int main()
         res.end();
     });
 
-    // Telemetry Request Route: Accepts GET requests.
-    // Sends a telemetry request packet and returns telemetry data as JSON.
+    // Telemetry Request Route: Sends a telemetry request and returns telemetry as JSON.
     CROW_ROUTE(app, "/telementry_request/")
     .methods(crow::HTTPMethod::Get)
     ([](const crow::request& req, crow::response& res) {
         std::string packet = PktDef::createTelemetryRequest();
-        if (mySocket.sendPacket(packet)) {
-            std::string telemetry = mySocket.receiveResponse();
+        std::cout << "Sending telemetry request packet (hex): ";
+        for (unsigned char c : packet) {
+            std::cout << std::hex << ((int)c & 0xff) << " ";
+        }
+        std::cout << std::dec << std::endl;
+        
+        if (client.sendPacket(packet)) {
+            std::string telemetry = client.receiveResponse();
             crow::json::wvalue response;
             response["status"] = "Telemetry received";
             response["telemetry"] = telemetry;
