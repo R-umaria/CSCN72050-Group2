@@ -30,29 +30,26 @@ int main()
 			});
 
 	//receives connection information/sets up UDP connection
-	CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::POST)	//only POST
-		([](const crow::request& req, crow::response& res, std::string ip, int port) {
+    CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::POST)    //only POST
+        ([](const crow::request& req, crow::response& res, std::string ip, int port) {
 
-		//set internal parameters to be used by UDP/IP communications
-		if (client.GetUDPSocket() == -1) {  // Check if the underlying socket file descriptor is -1 (invalid)
-			// Re-create the client object
-			client = MySocket(CLIENT, ip, port, UDP, DEFAULT_SIZE);
-		}
-		else {
-			client.SetIPAddr(ip);
-			client.SetPort(port);
-		}
-		std::cout << "Successfuly created UDP client socket" << std::endl;
-		//needs to send back a response to the html browser
-		res.set_header("Content-Type", "text/html");
+        //set internal parameters to be used by UDP/IP communications
+        if (client.GetUDPSocket() == -1) {  // Check if the underlying socket file descriptor is -1 (invalid)
+            // Re-create the client object
+            std::cout << "Recreating client socket.\n";
+            client = MySocket(CLIENT, ip, port, UDP, DEFAULT_SIZE);
+            std::cout << "Client socket recreated.\n";
+        }
+        else {
+            std::cout << "Updating ip and port.\n";
+            client.SetIPAddr(ip);
+            client.SetPort(port);
+        }
+        std::cout << "Successfuly created UDP client socket" << std::endl;
+        //needs to send back a response to the html browser
 
-		std::ostringstream os;
-		os << "Socket connected, IP: " << ip << " Port: " << port << std::endl;
-		res.code = 200;
-		res.write(os.str());
-
-		res.end();
-			});
+        res.end();
+            });
 
 	//sends sleep style command to robot
 	CROW_ROUTE(app, "/telecommand/").methods(crow::HTTPMethod::PUT)	//only PUT
