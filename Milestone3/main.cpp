@@ -25,9 +25,9 @@ int main()
 		res.end();
 	});
 
-	CROW_ROUTE(app, "/connect/<string>/<int>")	//only POST
+	CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::Post)	//only POST
 		([](const crow::request& req, crow::response& res, string fileName) {
-		ifstream in("../public/" + fileName, ifstream::in);
+		ifstream in("../public/connect.html", ifstream::in);
 		if (in) {
 			ostringstream contents;
 			contents << in.rdbuf();
@@ -39,6 +39,9 @@ int main()
 		else {
 			res.write("Not Found");
 		}
+		/////////
+			//code for socket
+		/////////
 		res.end();
 			});
 

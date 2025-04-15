@@ -1,0 +1,167 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Robot Command & Control GUI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .panel {
+            background-color: #fff;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        label {
+            display: inline-block;
+            width: 150px;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"], select {
+            padding: 8px;
+            margin: 5px 0;
+            width: calc(100% - 16px); /* account for padding */
+            box-sizing: border-box;
+        }
+
+        .btn-group {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        button {
+            cursor: pointer;
+            padding: 10px 15px;
+            margin: 5px;
+        }
+
+        #response-log {
+            width: 100%;
+            max-width: 800px;
+            height: 150px;
+            padding: 10px;
+            margin: 20px auto 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #eef;
+            font-family: Consolas, monospace;
+            display: block;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <h1>Robot Command & Control GUI</h1>
+
+    <!-- Telecommand Form -->
+    <div class="panel">
+        <h2>Telecommand</h2>
+        <form id="telecommandForm">
+            <!-- Direction Dropdown -->
+            <div>
+                <label for="direction">Direction:</label>
+                <select id="direction" name="direction">
+                    <option value="1">FORWARD</option>
+                    <option value="2">BACKWARD</option>
+                    <option value="3">RIGHT</option>
+                    <option value="4">LEFT</option>
+                </select>
+            </div>
+            <!-- Speed Input (like port input) -->
+            <div>
+                <label for="speed">Speed:</label>
+                <input type="number" id="speed" name="speed" placeholder="e.g., 5" required>
+            </div>
+            <!-- Duration Input (like port input) -->
+            <div>
+                <label for="duration">Duration (sec):</label>
+                <input type="number" id="duration" name="duration" placeholder="e.g., 10" required>
+            </div>
+            <!-- Button Group -->
+            <div class="btn-group">
+                <button type="button" id="drive-button">Drive</button>
+                <button type="button" id="sleep-button">Sleep</button>
+                <button type="button" id="telemetry-button">Telemetry</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Response Log Panel -->
+    <div class="panel">
+        <h2>Response Log</h2>
+        <textarea id="response-log" readonly></textarea>
+    </div>
+
+    <script>
+        // Utility function to append messages to the response log.
+        function logMessage(message) {
+            const logArea = document.getElementById('response-log');
+            logArea.value += message + "\n";
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // Handle Drive button click: send the direction, speed, and duration as payload.
+        document.getElementById('drive-button').addEventListener('click', function () {
+            const payload = {
+                direction: document.getElementById('direction').value,
+                speed: document.getElementById('speed').value,
+                duration: document.getElementById('duration').value
+            };
+            fetch('/telecommand/', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    logMessage("Drive Response: " + JSON.stringify(data));
+                })
+                .catch(error => {
+                    logMessage("Drive Error: " + error);
+                });
+        });
+
+        // Handle Sleep button click: send an empty payload.
+        document.getElementById('sleep-button').addEventListener('click', function () {
+            fetch('/telecommand/', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            })
+                .then(response => response.json())
+                .then(data => {
+                    logMessage("Sleep Response: " + JSON.stringify(data));
+                })
+                .catch(error => {
+                    logMessage("Sleep Error: " + error);
+                });
+        });
+
+        // Handle Telemetry button click: send a GET request.
+        document.getElementById('telemetry-button').addEventListener('click', function () {
+            fetch('/telementry_request/')
+                .then(response => response.json())
+                .then(data => {
+                    logMessage("Telemetry Response: " + JSON.stringify(data));
+                })
+                .catch(error => {
+                    logMessage("Telemetry Error: " + error);
+                });
+        });
+    </script>
+</body>
+</html>
