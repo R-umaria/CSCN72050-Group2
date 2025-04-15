@@ -19,21 +19,18 @@
             border: 1px solid #ddd;
             border-radius: 5px;
         }
-        /* Connection panel overrides for a narrower container */
+        /* Connection panel with a narrower container */
         .container {
             max-width: 400px;
         }
-
         h1, h2 {
             text-align: center;
             color: #333;
         }
-        /* Label and Input styles */
         label {
             display: block;
             margin: 10px 0 5px;
         }
-
         input[type="text"],
         input[type="number"],
         select {
@@ -54,7 +51,6 @@
             border-radius: 3px;
             margin-top: 10px;
         }
-
             a.connect-btn:hover {
                 background-color: #218838;
             }
@@ -63,7 +59,6 @@
             text-align: center;
             margin-top: 10px;
         }
-
         button {
             cursor: pointer;
             padding: 10px 15px;
@@ -143,34 +138,27 @@
     </div>
 
     <script>
-        // Connection functionality:
+        // Connection functionality
         function Connect() {
             var action = "/connect/";
-
-            //get input values
             var ip = document.getElementById('ip').value.trim();
             var port = document.getElementById('port').value.trim();
-
-            //construct the new url
             action = action + ip + '/' + port;
-
-            //update action
             document.getElementById('ConnectForm').action = action;
-
-            //submit
             document.getElementById('ConnectForm').submit();
         }
 
-        // Utility: log messages to the response log.
+        // Utility function to log messages
         function logMessage(message) {
             const logArea = document.getElementById('response-log');
             logArea.value += message + "\n";
             logArea.scrollTop = logArea.scrollHeight;
         }
 
-        // Telecommand: Drive button sends a PUT request with direction, speed, and duration.
+        // Telecommand: Drive button sends a PUT request with JSON payload
         document.getElementById('drive-button').addEventListener('click', function () {
             const payload = {
+                command: "drive",
                 direction: document.getElementById('direction').value,
                 speed: document.getElementById('speed').value,
                 duration: document.getElementById('duration').value
@@ -189,12 +177,12 @@
                 });
         });
 
-        // Telecommand: Sleep button sends a PUT request (empty payload).
+        // Telecommand: Sleep button sends a PUT request with a sleep command.
         document.getElementById('sleep-button').addEventListener('click', function () {
             fetch('/telecommand/', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
+                body: JSON.stringify({ command: "sleep" })
             })
                 .then(response => response.json())
                 .then(data => {
@@ -205,7 +193,7 @@
                 });
         });
 
-        // Telecommand: Telemetry button sends a GET request.
+        // Telemetry: Sends a GET request to retrieve telemetry data.
         document.getElementById('telemetry-button').addEventListener('click', function () {
             fetch('/telementry_request/')
                 .then(response => response.json())

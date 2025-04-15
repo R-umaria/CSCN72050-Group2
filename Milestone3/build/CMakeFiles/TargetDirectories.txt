@@ -1,0 +1,3 @@
+/mnt/robot_controller/Milestone3/build/CMakeFiles/Milestone3.dir
+/mnt/robot_controller/Milestone3/build/CMakeFiles/edit_cache.dir
+/mnt/robot_controller/Milestone3/build/CMakeFiles/rebuild_cache.dir

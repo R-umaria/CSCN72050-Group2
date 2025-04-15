@@ -3,21 +3,21 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include "PktDef.h"      // Include Milestone 1 code.
-#include "MySocket.h"    // Include Milestone 2 code.
+#include "../Milestone1/PktDefProject/PktDef.h"      // Milestone 1: PktDef header.
+#include "../Milestone2/Milestone2/MySocket.h"          // Milestone 2: MySocket header.
 
 // Create a global MySocket instance in UDP client mode.
-// (Provide dummy initial values; these will be updated by /connect.)
+// Dummy initial values; these will be updated by the /connect route.
 MySocket mySocket(CLIENT, "127.0.0.1", 0, UDP, DEFAULT_SIZE);
 
 int main()
 {
     crow::SimpleApp app;
 
-    // Root Route: Serve the main GUI page.
+    // Root Route: Serve the main GUI page from "public/index.html".
     CROW_ROUTE(app, "/")
     ([]() {
-        std::ifstream in("public/index.html");
+        std::ifstream in("../public/index.html");
         if (!in) {
             return crow::response(404, "Index file not found");
         }
@@ -28,7 +28,7 @@ int main()
         return resp;
     });
 
-    // Connect Route: Configure the socket with robot IP and port.
+    // Connect Route: Configures the UDP socket with robot IP and port.
     CROW_ROUTE(app, "/connect/<string>/<int>")
     .methods(crow::HTTPMethod::Post)
     ([](const crow::request& req, crow::response& res, std::string robotIP, int robotPort) {
@@ -37,75 +37,65 @@ int main()
             response["status"] = "Connected";
             response["robotIP"] = robotIP;
             response["robotPort"] = robotPort;
-            res.write(crow::json::dump(response));
-        }
-        else {
+            res.write(response.dump());
+        } else {
             res.code = 500;
             crow::json::wvalue response;
             response["status"] = "Error: Socket configuration failed";
-            res.write(crow::json::dump(response));
+            res.write(response.dump());
         }
         res.end();
     });
 
-	CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::POST)	//only POST
-		([](const crow::request& req, crow::response& res, string ip, int port) {
-		
-		if (!robotSocket) {
-			MySocket robotSocket(CLIENT, ip, port, UDP);
-		}
-		else {
-			robotSocket->SetIPAddr(ip);
-			robotSocket->SetPort(port);
-		}
+    // Telecommand Route: Accepts a PUT request with a JSON payload.
+    // Expect payload like:
+    // { "command": "drive", "direction": 1, "speed": 90, "duration": 10 }
+    // or for sleep:
+    // { "command": "sleep" }
+    CROW_ROUTE(app, "/telecommand/")
+    .methods(crow::HTTPMethod::Put)
+    ([](const crow::request& req, crow::response& res) {
+        auto body = crow::json::load(req.body);
+        if (!body) {
+            res.code = 400;
+            res.write("Invalid JSON payload");
+            res.end();
+            return;
+        }
+        std::string command = body["command"].s();
+        std::string packet;
+        if (command == "drive") {
+            int direction = body["direction"].i();
+            int speed = body["speed"].i();
+            int duration = body["duration"].i();
+            packet = PktDef::createDriveCommand(direction, speed, duration);
+        }
+        else if (command == "sleep") {
+            packet = PktDef::createSleepCommand();
+        }
+        else {
+            res.code = 400;
+            res.write("Invalid command specified");
+            res.end();
+            return;
+        }
+        if (mySocket.sendPacket(packet)) {
+            std::string ack = mySocket.receiveResponse();
+            crow::json::wvalue response;
+            response["status"] = "Command sent";
+            response["ack"] = ack;
+            res.write(response.dump());
+        } else {
+            res.code = 500;
+            crow::json::wvalue response;
+            response["status"] = "Error sending command";
+            res.write(response.dump());
+        }
+        res.end();
+    });
 
-		ostringstream contents;
-		contents << in.rdbuf();
-		in.close();
-
-		res.set_header("Content-Type", "text/html");
-		res.write(contents.str());
-
-		res.write("Not Found");
-		res.end();
-			});
-
-	CROW_ROUTE(app, "/telecommand/").methods(crow::HTTPMethod::PUT)	//only PUT
-		([](const crow::request& req, crow::response& res, string fileName) {
-		ifstream in("../public/images/" + fileName, ifstream::in);
-		if (in) {
-			ostringstream contents;
-			contents << in.rdbuf();
-			in.close();
-
-			res.set_header("Content-Type", "image/png");
-			res.write(contents.str());
-		}
-		else {
-			res.code = 404;
-			res.write("Not Found");
-		}
-		res.end();
-			});
-
-	CROW_ROUTE(app, "/telemetry_request/").methods(crow::HTTPMethod::GET)	//only GET
-		([](const crow::request& req, crow::response& res, string fileName) {
-		ifstream in("../public/scripts/" + fileName, ifstream::in);
-		if (in) {
-			ostringstream contents;
-			contents << in.rdbuf();
-			in.close();
-
-			res.set_header("Content-Type", "application/javascript");
-			res.write(contents.str());
-		}
-		else {
-			res.write("Not Found");
-		}
-		res.end();
-			});
-
-    // Telemetry Request Route: Sends a telemetry request and returns the result.
+    // Telemetry Request Route: Accepts GET requests.
+    // Sends a telemetry request packet and returns telemetry data as JSON.
     CROW_ROUTE(app, "/telementry_request/")
     .methods(crow::HTTPMethod::Get)
     ([](const crow::request& req, crow::response& res) {
@@ -115,20 +105,17 @@ int main()
             crow::json::wvalue response;
             response["status"] = "Telemetry received";
             response["telemetry"] = telemetry;
-            res.write(crow::json::dump(response));
-        }
-        else {
+            res.write(response.dump());
+        } else {
             res.code = 500;
             crow::json::wvalue response;
             response["status"] = "Error sending telemetry request";
-            res.write(crow::json::dump(response));
+            res.write(response.dump());
         }
         res.end();
     });
 
-    // Remove or comment out any extraneous routes (example route removed).
-
-    // Run the server on port 23500.
+    // Run the webserver on port 23500.
     app.port(23500).multithreaded().run();
     return 0;
 }
