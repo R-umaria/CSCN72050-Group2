@@ -2,6 +2,7 @@
 
 #include "PktDef.h"
 #include <cstring>   // For memcpy
+#include <sstream>   // update from milesone3
 
 // Default constructor
 PktDef::PktDef() {
@@ -171,7 +172,7 @@ char* PktDef::GenPacket() {
     RawBuffer = new char[totalSize];
     memcpy(RawBuffer, &packet.header, HEADERSIZE);                  // Copy header
     // Calculate body length (if any) and copy it.
-    int bodyLcanength = totalSize - (HEADERSIZE + 1);                  // Determine body length
+    int bodyLength = totalSize - (HEADERSIZE + 1);                  // Determine body length
     if (bodyLength > 0 && packet.Data != nullptr) {
         memcpy(RawBuffer + HEADERSIZE, packet.Data, bodyLength);    // Copy body
     }
@@ -179,4 +180,78 @@ char* PktDef::GenPacket() {
     CalcCRC();
     RawBuffer[totalSize - 1] = packet.CRC;  // Add CRC to packet
     return RawBuffer;
+}
+
+
+// updates from Milestone3
+// 
+// New static functions for Milestone 3:
+
+std::string PktDef::createDriveCommand(int direction, int speed, int duration) {
+    PktDef pkt;
+    pkt.SetCmd(DRIVE);
+    pkt.SetPktCount(1);  // You may wish to use an incremental counter.
+
+    // Prepare drive command body using DriveBody.
+    DriveBody drive;
+    drive.Direction = static_cast<unsigned char>(direction);
+    drive.Duration = static_cast<unsigned char>(duration);
+    drive.Speed = static_cast<unsigned char>(speed);
+
+    // Copy drive body to a temporary buffer.
+    char driveData[sizeof(DriveBody)];
+    std::memcpy(driveData, &drive, sizeof(DriveBody));
+    pkt.SetBodyData(driveData, sizeof(DriveBody));
+
+    // Generate the complete packet.
+    char* raw = pkt.GenPacket();
+    return std::string(raw, pkt.GetLength());
+}
+
+std::string PktDef::createSleepCommand() {
+    PktDef pkt;
+    pkt.SetCmd(SLEEP);
+    pkt.SetPktCount(1);
+    // No body data for Sleep command.
+    pkt.SetBodyData(nullptr, 0);
+    char* raw = pkt.GenPacket();
+    return std::string(raw, pkt.GetLength());
+}
+
+std::string PktDef::createTelemetryRequest() {
+    PktDef pkt;
+    // For telemetry requests, we use the RESPONSE flag.
+    pkt.SetCmd(RESPONSE);
+    pkt.SetPktCount(1);
+    pkt.SetBodyData(nullptr, 0);
+    char* raw = pkt.GenPacket();
+    return std::string(raw, pkt.GetLength());
+}
+
+// Debug function to print internal packet info
+std::string PktDef::Debug() const {
+    std::ostringstream os;
+    os << "---- PktDef Debug Info ----\n";
+    os << "Packet Length: " << packet.header.Length << "\n";
+    os << "Packet Count: " << packet.header.PktCount << "\n";
+    os << "Command Flags => Drive: " << packet.header.Drive
+       << ", Sleep: " << packet.header.Sleep
+       << ", Status: " << packet.header.Status
+       << ", Ack: " << packet.header.Ack << "\n";
+    os << "CRC: " << static_cast<int>(packet.CRC) << "\n";
+
+    int bodyLength = packet.header.Length - (HEADERSIZE + 1);
+    os << "Body Length: " << bodyLength << "\n";
+
+    if (packet.Data != nullptr && bodyLength > 0) {
+        for (int i = 0; i < bodyLength; ++i) {
+            os << "Byte[" << i << "] = " << std::hex << std::showbase
+               << static_cast<int>(static_cast<unsigned char>(packet.Data[i])) << "\n";
+        }
+    } else {
+        os << "No body data.\n";
+    }
+
+    os << "---------------------------\n";
+    return os.str();
 }
