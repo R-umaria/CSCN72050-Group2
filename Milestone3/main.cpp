@@ -1,191 +1,135 @@
+// main.cpp - Fully Updated Version
 #define CROW_MAIN
 #include "crow_all.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
-#include "../Milestone1/PktDefProject/PktDef.h"      // Milestone 1: Packet definitions.
-#include "../Milestone2/Milestone2/MySocket.h"          // Milestone 2: Socket communication.
+#include "../Milestone1/PktDefProject/PktDef.h"
+#include "../Milestone2/Milestone2/MySocket.h"
 
 MySocket client(CLIENT, "0.0.0.0", 0, UDP, DEFAULT_SIZE);
+static int packetCount = 0;  // Global packet counter
 
-int main()
-{
-	crow::SimpleApp app;
+int main() {
+    crow::SimpleApp app;
 
-	CROW_ROUTE(app, "/")
-		([](const crow::request& req, crow::response& res) {
-		std::ifstream in("../public/index.html", std::ifstream::in);
-		if (in) {
-			std::ostringstream contents;
-			contents << in.rdbuf();
-			in.close();
+    CROW_ROUTE(app, "/")([](const crow::request& req, crow::response& res) {
+        std::ifstream in("../public/index.html");
+        if (in) {
+            std::ostringstream contents;
+            contents << in.rdbuf();
+            in.close();
+            res.set_header("Content-Type", "text/html");
+            res.write(contents.str());
+        } else {
+            res.code = 404;
+            res.write("Not Found");
+        }
+        res.end();
+    });
 
-			res.set_header("Content-Type", "text/html");
-			res.write(contents.str());
-		}
-		else {
-			res.write("Not Found");
-		}
-		res.end();
-			});
+    CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::POST)
+    ([](const crow::request& req, crow::response& res, std::string ip, int port) {
+        if (client.GetUDPSocket() == -1) {
+            client = MySocket(CLIENT, ip, port, UDP, DEFAULT_SIZE);
+        } else {
+            client.SetIPAddr(ip);
+            client.SetPort(port);
+        }
+        std::ifstream in("../public/command.html");
+        if (in) {
+            std::ostringstream contents;
+            contents << in.rdbuf();
+            in.close();
+            res.set_header("Content-Type", "text/html");
+            res.write(contents.str());
+        } else {
+            res.code = 404;
+            res.write("Not Found");
+        }
+        res.end();
+    });
 
-	//receives connection information/sets up UDP connection
-	CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::POST)	//only POST
-		([](const crow::request& req, crow::response& res, std::string ip, int port) {
-		//set internal parameters to be used by UDP/IP communications
-		if (client.GetUDPSocket() == -1) {  // Check if the underlying socket file descriptor is -1 (invalid)
-			// Re-create the client object
-			std::cout << "Recreating client socket.\n";
-			client = MySocket(CLIENT, ip, port, UDP, DEFAULT_SIZE);
-			std::cout << "Client socket recreated.\n";
-		}
-		else {
-			std::cout << "Updating ip and port.\n";
-			client.SetIPAddr(ip);
-			client.SetPort(port);
-		}
-		std::cout << "Successfuly created UDP client socket" << std::endl;
-		std::ifstream in("../public/command.html", std::ifstream::in);
-		if (in) {
-			std::ostringstream contents;
-			contents << in.rdbuf();
-			in.close();
+    CROW_ROUTE(app, "/telecommand/").methods(crow::HTTPMethod::PUT)
+    ([](const crow::request& req, crow::response& res) {
+        PktDef pkt;
+        pkt.SetCmd(PktDef::SLEEP);
+        pkt.SetPktCount(++packetCount);
+        pkt.SetBodyData(nullptr, 0);
+        char* raw = pkt.GenPacket();
+        client.SendData(raw, pkt.GetLength());
 
-			res.set_header("Content-Type", "text/html");
-			res.write(contents.str());
-		}
-		else {
-			res.code = 404;
-			res.write("Not Found");
-		}
-		res.end();
-			});
+        char buff[1024];
+        int bytesReceived = client.GetData(buff);
+        PktDef resp(buff);
+        if (bytesReceived > 0 && resp.GetAck()) {
+            res.write("Robot is now sleeping.\n");
+        } else {
+            res.code = 500;
+            res.write("Sleep command not acknowledged.\n");
+        }
+        res.end();
+    });
 
-	//sends sleep style command to robot
-	CROW_ROUTE(app, "/telecommand/").methods(crow::HTTPMethod::PUT)	//only PUT
-		([](const crow::request& req, crow::response& res) {
+    CROW_ROUTE(app, "/telecommand/<int>/<int>/<int>").methods(crow::HTTPMethod::PUT)
+    ([](const crow::request& req, crow::response& res, int direction, int duration, int speed) {
+        PktDef pkt;
+        pkt.SetCmd(PktDef::DRIVE);
+        pkt.SetPktCount(++packetCount);
 
-		//construct packet
-		PktDef pkt;
-		pkt.SetCmd(PktDef::SLEEP);
-		pkt.SetPktCount(pkt.GetPktCount() + 1);
+        DriveBody body{(unsigned char)direction, (unsigned char)duration, (unsigned char)speed};
+        char driveData[sizeof(DriveBody)];
+        memcpy(driveData, &body, sizeof(DriveBody));
+        pkt.SetBodyData(driveData, sizeof(DriveBody));
+        char* raw = pkt.GenPacket();
+        client.SendData(raw, pkt.GetLength());
 
-		char* raw = pkt.GenPacket();
+        char buff[1024];
+        int bytesReceived = client.GetData(buff);
+        PktDef resp(buff);
+        if (bytesReceived > 0 && resp.GetAck()) {
+            std::string dirStr = (direction == 1) ? "FORWARD" : (direction == 2) ? "BACKWARD" : (direction == 3) ? "RIGHT" : "LEFT";
+            std::ostringstream os;
+            os << "Robot is now driving " << dirStr << " for " << duration << " seconds at " << speed << "% speed.\n";
+            res.write(os.str());
+        } else {
+            res.code = 500;
+            res.write("Drive command not acknowledged.\n");
+        }
+        res.end();
+    });
 
-		client.SendData(raw, pkt.GetLength());
-		//receive acknowledgement
-		char buff[1024];
-		int bytesReceived = client.GetData(buff);
-		if (bytesReceived > 0) {
-			std::string response(buff, bytesReceived);
-			if (response == "ACK") {
-				res.set_header("Content-Type", "text/plain");
-				res.write("Robot is now sleeping.\n");
-			}
-			else if (response == "NACK") {
-				res.code = 500;
-				res.write("Packet not acknowledged.\n");
-			}
-		}
-		else {
-			res.code = 500;
-			res.write("No response received.\n");
-		}
+    CROW_ROUTE(app, "/telemetry_request/").methods(crow::HTTPMethod::GET)
+    ([](const crow::request& req, crow::response& res) {
+        PktDef pkt;
+        pkt.SetCmd(PktDef::RESPONSE);
+        pkt.SetPktCount(++packetCount);
+        pkt.SetBodyData(nullptr, 0);
+        char* raw = pkt.GenPacket();
+        client.SendData(raw, pkt.GetLength());
 
-		res.end();
-			});
+        char buff[1024];
+        int bytesReceived = client.GetData(buff);
+        PktDef resp(buff);
+        if (bytesReceived > 0 && resp.GetAck() && resp.GetCmd() == PktDef::RESPONSE) {
+            unsigned char* data = reinterpret_cast<unsigned char*>(resp.GetBodyData());
+            std::ostringstream os;
+            os << "Telemetry Response:\n";
+            os << "LastPktCounter: " << (data[0] << 8 | data[1]) << "\n";
+            os << "CurrentGrade: " << (data[2] << 8 | data[3]) << "\n";
+            os << "HitCount: " << static_cast<int>(data[4]) << "\n";
+            os << "LastCmd: " << static_cast<int>(data[5]) << "\n";
+            os << "LastCmdValue: " << static_cast<int>(data[6]) << "\n";
+            os << "LastCmdSpeed: " << static_cast<int>(data[7]) << "\n";
+            res.set_header("Content-Type", "text/plain");
+            res.write(os.str());
+        } else {
+            res.code = 500;
+            res.write("Telemetry not acknowledged or invalid.\n");
+        }
+        res.end();
+    });
 
-	//sends drive style command to robot
-	CROW_ROUTE(app, "/telecommand/<int>/<int>/<int>").methods(crow::HTTPMethod::PUT)	//only PUT
-		([](const crow::request& req, crow::response& res, int direction, int duration, int speed) {
-
-		PktDef pkt;
-		pkt.SetCmd(PktDef::DRIVE);
-		pkt.SetPktCount(pkt.GetPktCount() + 1);
-
-		//build drive body
-		DriveBody body;
-		body.Direction = direction;
-		body.Duration = duration;
-		body.Speed = speed;
-
-		char driveData[sizeof(DriveBody)];
-		std::memcpy(driveData, &body, sizeof(DriveBody));
-		pkt.SetBodyData(driveData, sizeof(DriveBody));
-
-		char* raw = pkt.GenPacket();
-
-		client.SendData(raw, pkt.GetLength());
-		//receive acknowledgement
-		char buff[1024];
-		int bytesReceived = client.GetData(buff);
-		if (bytesReceived > 0) {
-			std::string response(buff, bytesReceived);
-			if (response == "ACK") {
-				res.set_header("Content-Type", "text/plain");
-
-				std::string dir;
-				if (direction == 1) {
-					dir = "FORWARD";
-				}
-				else if (direction == 2) {
-					dir = "BACKWARD";
-				}
-				else if (direction == 3) {
-					dir = "RIGHT";
-				}
-				else if (direction == 4) {
-					dir = "LEFT";
-				}
-				std::ostringstream os;
-				os << "Robot is now driving " << dir << " for " << duration << " seconds at " << speed << " speed.\n";
-
-				res.write(os.str());
-			}
-			else if (response == "NACK") {
-				res.code = 500;
-				res.write("Packet not acknowledged.\n");
-			}
-		}
-		else {
-			res.code = 500;
-			res.write("No response received.\n");
-		}
-		res.end();
-			});
-
-	//sends request for housekeeping telemetry
-	CROW_ROUTE(app, "/telemetry_request/").methods(crow::HTTPMethod::GET)	//only GET
-		([](const crow::request& req, crow::response& res) {
-
-		PktDef pkt;
-		pkt.SetCmd(PktDef::RESPONSE);
-		pkt.SetPktCount(pkt.GetPktCount() + 1);
-
-		char* raw = pkt.GenPacket();
-
-		//receive acknowledgement
-		char buff[1024];
-		int bytesReceived = client.GetData(buff);
-		if (bytesReceived > 0) {
-			std::string response(buff, bytesReceived);
-			if (response == "ACK") {
-				res.set_header("Content-Type", "text/plain");
-				res.write("Robot is now sleeping.\n");
-			}
-			else if (response == "NACK") {
-				res.code = 500;
-				res.write("Packet not acknowledged.\n");
-			}
-		}
-		else {
-			res.code = 500;
-			res.write("No response received.\n");
-		}
-
-		res.end();
-			});
-
-	app.port(23500).multithreaded().run();
-	return 0;
+    app.port(23500).multithreaded().run();
+    return 0;
 }

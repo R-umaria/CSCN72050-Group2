@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "*.embeddedhtml": "html",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "future": "cpp",
+        "system_error": "cpp"
     }
 }

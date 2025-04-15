@@ -5,100 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Robot Commands</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            margin: 20px;
-        }
-
-        .panel {
-            background-color: #fff;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-
-        h1, h2 {
-            text-align: center;
-            color: #333;
-        }
-
-        label {
-            display: block;
-            margin: 10px 0 5px;
-        }
-
-        input[type="number"],
-        select {
-            width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-        }
-
-        .btn-group {
-            text-align: center;
-            margin-top: 10px;
-        }
-
-        a.command-btn {
-            display: inline-block;
-            padding: 10px 0;
-            text-align: center;
-            text-decoration: none;
-            background-color: #28a745;
-            color: #fff;
-            border-radius: 3px;
-            margin: 5px;
-            width: 30%; /* Adjust width as needed */
-        }
-
-            a.command-btn:hover {
-                background-color: #218838;
-            }
-
-        #response-log {
-            width: 100%;
-            max-width: 800px;
-            height: 150px;
-            padding: 10px;
-            margin: 20px auto 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            background-color: #eef;
-            font-family: Consolas, monospace;
-            box-sizing: border-box;
-            display: block;
-        }
+        body { font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 20px; }
+        .panel { background-color: #fff; max-width: 800px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        h1, h2 { text-align: center; color: #333; }
+        label { display: block; margin: 10px 0 5px; }
+        input[type="number"], select { width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 10px; }
+        .btn-group { text-align: center; margin-top: 10px; }
+        a.command-btn { display: inline-block; padding: 10px 0; text-align: center; text-decoration: none; background-color: #28a745; color: #fff; border-radius: 3px; margin: 5px; width: 30%; }
+        a.command-btn:hover { background-color: #218838; }
+        #response-log { width: 100%; max-width: 800px; height: 150px; padding: 10px; margin: 20px auto 0; border: 1px solid #ccc; border-radius: 4px; background-color: #eef; font-family: Consolas, monospace; box-sizing: border-box; display: block; }
     </style>
 </head>
 <body>
     <h1>Robot Commands</h1>
     <div class="panel">
         <form id="robotForm">
-            <!-- Direction Dropdown -->
-            <div>
-                <label for="direction">Direction:</label>
-                <select id="direction" name="direction">
-                    <option value="1">FORWARD</option>
-                    <option value="2">BACKWARD</option>
-                    <option value="3">RIGHT</option>
-                    <option value="4">LEFT</option>
-                </select>
-            </div>
-            <!-- Speed Input -->
-            <div>
-                <label for="speed">Speed:</label>
-                <input type="number" id="speed" name="speed" placeholder="e.g., 5" required>
-            </div>
-            <!-- Duration Input -->
-            <div>
-                <label for="duration">Duration (sec):</label>
-                <input type="number" id="duration" name="duration" placeholder="e.g., 10" required>
-            </div>
-            <!-- Button Group -->
+            <label for="direction">Direction:</label>
+            <select id="direction" name="direction">
+                <option value="1">FORWARD</option>
+                <option value="2">BACKWARD</option>
+                <option value="3">RIGHT</option>
+                <option value="4">LEFT</option>
+            </select>
+            <label for="speed">Speed:</label>
+            <input type="number" id="speed" name="speed" placeholder="e.g., 80" required>
+            <label for="duration">Duration (sec):</label>
+            <input type="number" id="duration" name="duration" placeholder="e.g., 10" required>
             <div class="btn-group">
                 <a href="#" class="command-btn" onclick="Drive(); return false;">Drive</a>
                 <a href="#" class="command-btn" onclick="Sleep(); return false;">Sleep</a>
@@ -111,35 +43,34 @@
         <textarea id="response-log" readonly></textarea>
     </div>
     <script>
+        function logMessage(message) {
+            const logArea = document.getElementById('response-log');
+            logArea.value += message + "\n";
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
         function Drive() {
-            var action = "/telecommand/";
-
-            //get input values
-            var dir = document.getElementById('direction').value;
-            var dur = document.getElementById('duration').value;
-            var sp = document.getElementById('speed').value;
-
-            action = action + dir + "/" + dur + "/" + sp;
-
-            fetch(action, { method: "PUT" })
+            const dir = document.getElementById('direction').value;
+            const dur = document.getElementById('duration').value;
+            const sp = document.getElementById('speed').value;
+            fetch(`/telecommand/${dir}/${dur}/${sp}`, { method: "PUT" })
                 .then(response => response.text())
-                .then(data => {
-                    var logArea = document.getElementById('response-log');
-                    logArea.value += data + "\n";
-                    logArea.scrollTop = logArea.scrollHeight;
-                })
-                .catch(error => console.error("Drive Error:", error));
-
-            //document.getElementById('robotForm').action = action;
-            //document.getElementById('robotForm').submit();
+                .then(data => logMessage(data))
+                .catch(error => logMessage("Drive Error: " + error));
         }
 
         function Sleep() {
-
+            fetch("/telecommand/", { method: "PUT" })
+                .then(response => response.text())
+                .then(data => logMessage(data))
+                .catch(error => logMessage("Sleep Error: " + error));
         }
 
-        function Response() {
-
+        function Telemetry() {
+            fetch("/telemetry_request/", { method: "GET" })
+                .then(response => response.text())
+                .then(data => logMessage(data))
+                .catch(error => logMessage("Telemetry Error: " + error));
         }
     </script>
 </body>
