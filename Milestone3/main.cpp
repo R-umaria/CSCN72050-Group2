@@ -4,6 +4,8 @@
 #include <iostream>
 using namespace std;
 
+MySocket client(CLIENT, "127.0.0.1", 0, UDP, DEFAULT_SIZE);
+
 int main()
 {
 	crow::SimpleApp app;
@@ -25,60 +27,84 @@ int main()
 		res.end();
 	});
 
+	//receives connection information/sets up UDP connection
 	CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::POST)	//only POST
 		([](const crow::request& req, crow::response& res, string ip, int port) {
 		
-		if (!robotSocket) {
-			MySocket robotSocket(CLIENT, ip, port, UDP);
+		//set internal parameters to be used by UDP/IP communications
+		if (client == INVALID_SOCKET) {
+			MySocket client(CLIENT, ip, port, UDP, DEFAULT_SIZE);
 		}
 		else {
-			robotSocket->SetIPAddr(ip);
-			robotSocket->SetPort(port);
+			client.SetIPAddr(ip);
+			client.SetPort(port);
 		}
 
-		ostringstream contents;
-		contents << in.rdbuf();
-		in.close();
-
+		//needs to send back a response to the html browser
 		res.set_header("Content-Type", "text/html");
-		res.write(contents.str());
 
-		res.write("Not Found");
+		ostringstream os;
+		os << "Socket connected, IP: " << ip << " Port: " << port << std::endl;
+		res.code = 200;
+		res.write(os.str());
+
 		res.end();
 			});
 
+	//sends sleep style command to robot
 	CROW_ROUTE(app, "/telecommand/").methods(crow::HTTPMethod::PUT)	//only PUT
-		([](const crow::request& req, crow::response& res, string fileName) {
-		ifstream in("../public/images/" + fileName, ifstream::in);
-		if (in) {
-			ostringstream contents;
-			contents << in.rdbuf();
-			in.close();
+		([](const crow::request& req, crow::response& res) {
 
-			res.set_header("Content-Type", "image/png");
-			res.write(contents.str());
-		}
-		else {
-			res.code = 404;
-			res.write("Not Found");
-		}
+		//construct packet
+		PktDef pkt;
+		pkt.SetCmd(SLEEP);
+		pkt.SetPktCount(pkt.GetPktCount() + 1);
+
+		//return error if invalid
+		res.code = 500;
+		res.write("Unable to create packet");
+		res.end();
+
+		char* raw = pkt.GenPacket();
+
+		res.end();
+			});
+
+	//sends drive style command to robot
+	CROW_ROUTE(app, "/telecommand/<int>/<int>/<int>").methods(crow::HTTPMethod::PUT)	//only PUT
+		([](const crow::request& req, crow::response& res, int direction, int speed, int duration) {
+		
+		PktDef pkt;
+		pkt.SetCmd(DRIVE);
+		pkt.SetPktCount(pkt.GetPktCount() + 1);
+
+		//build drive body
+		DriveBody body;
+		body.Direction = direction;
+		body.Duration = duration;
+		body.Speed = speed;
+
+		char driveData[sizeof(DriveBody)];
+		std::memcpy(driveData, &body, sizeof(DriveBody));
+		pkt.SetBodyData(driveData, sizeof(DriveBody));
+
+		//return error if invalid
+
+		char* raw = pkt.GenPacket();
+
 		res.end();
 			});
 
 	CROW_ROUTE(app, "/telemetry_request/").methods(crow::HTTPMethod::GET)	//only GET
 		([](const crow::request& req, crow::response& res, string fileName) {
-		ifstream in("../public/scripts/" + fileName, ifstream::in);
-		if (in) {
-			ostringstream contents;
-			contents << in.rdbuf();
-			in.close();
+		//sends request for housekeeping telemetry
 
-			res.set_header("Content-Type", "application/javascript");
-			res.write(contents.str());
-		}
-		else {
-			res.write("Not Found");
-		}
+		PktDef pkt;
+		pkt.SetCmd(RESPONSE);
+		pkt.SetPktCount(pkt.GetPktCount() + 1);
+
+		char* raw = pkt.GenPacket();
+
 		res.end();
 			});
 
