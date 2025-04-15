@@ -48,51 +48,62 @@ int main()
         res.end();
     });
 
-    // Telecommand Route: Handles drive and sleep commands.
-    CROW_ROUTE(app, "/telecommand/")
-    .methods(crow::HTTPMethod::Put)
-    ([](const crow::request& req, crow::response& res) {
-        auto body = crow::json::load(req.body);
-        if (!body) {
-            res.code = 400;
-            res.write("Invalid JSON payload");
-            res.end();
-            return;
-        }
+	CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::POST)	//only POST
+		([](const crow::request& req, crow::response& res, string ip, int port) {
+		
+		if (!robotSocket) {
+			MySocket robotSocket(CLIENT, ip, port, UDP);
+		}
+		else {
+			robotSocket->SetIPAddr(ip);
+			robotSocket->SetPort(port);
+		}
 
-        std::string command = body["command"].s();
-        std::string packet;
-        if (command == "drive") {
-            int direction = body["direction"].i();
-            int speed = body["speed"].i();
-            int duration = body["duration"].i();
-            packet = PktDef::createDriveCommand(direction, speed, duration);
-        }
-        else if (command == "sleep") {
-            packet = PktDef::createSleepCommand();
-        }
-        else {
-            res.code = 400;
-            res.write("Invalid command specified");
-            res.end();
-            return;
-        }
+		ostringstream contents;
+		contents << in.rdbuf();
+		in.close();
 
-        if (mySocket.sendPacket(packet)) {
-            std::string ack = mySocket.receiveResponse();
-            crow::json::wvalue response;
-            response["status"] = "Command sent";
-            response["ack"] = ack;
-            res.write(crow::json::dump(response));
-        }
-        else {
-            res.code = 500;
-            crow::json::wvalue response;
-            response["status"] = "Error sending command";
-            res.write(crow::json::dump(response));
-        }
-        res.end();
-    });
+		res.set_header("Content-Type", "text/html");
+		res.write(contents.str());
+
+		res.write("Not Found");
+		res.end();
+			});
+
+	CROW_ROUTE(app, "/telecommand/").methods(crow::HTTPMethod::PUT)	//only PUT
+		([](const crow::request& req, crow::response& res, string fileName) {
+		ifstream in("../public/images/" + fileName, ifstream::in);
+		if (in) {
+			ostringstream contents;
+			contents << in.rdbuf();
+			in.close();
+
+			res.set_header("Content-Type", "image/png");
+			res.write(contents.str());
+		}
+		else {
+			res.code = 404;
+			res.write("Not Found");
+		}
+		res.end();
+			});
+
+	CROW_ROUTE(app, "/telemetry_request/").methods(crow::HTTPMethod::GET)	//only GET
+		([](const crow::request& req, crow::response& res, string fileName) {
+		ifstream in("../public/scripts/" + fileName, ifstream::in);
+		if (in) {
+			ostringstream contents;
+			contents << in.rdbuf();
+			in.close();
+
+			res.set_header("Content-Type", "application/javascript");
+			res.write(contents.str());
+		}
+		else {
+			res.write("Not Found");
+		}
+		res.end();
+			});
 
     // Telemetry Request Route: Sends a telemetry request and returns the result.
     CROW_ROUTE(app, "/telementry_request/")
