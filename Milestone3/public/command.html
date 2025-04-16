@@ -1,77 +1,664 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Robot Commands</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 20px; }
-        .panel { background-color: #fff; max-width: 800px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-        h1, h2 { text-align: center; color: #333; }
-        label { display: block; margin: 10px 0 5px; }
-        input[type="number"], select { width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 10px; }
-        .btn-group { text-align: center; margin-top: 10px; }
-        a.command-btn { display: inline-block; padding: 10px 0; text-align: center; text-decoration: none; background-color: #28a745; color: #fff; border-radius: 3px; margin: 5px; width: 30%; }
-        a.command-btn:hover { background-color: #218838; }
-        #response-log { width: 100%; max-width: 800px; height: 150px; padding: 10px; margin: 20px auto 0; border: 1px solid #ccc; border-radius: 4px; background-color: #eef; font-family: Consolas, monospace; box-sizing: border-box; display: block; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Space Rover Controller</title>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2d3e50;
+      --secondary: #3498db;
+      --accent: #e74c3c;
+      --success: #2ecc71;
+      --warning: #f39c12;
+      --light: #ecf0f1;
+      --dark: #1a2530;
+      --space-blue: #1e3a8a;
+      --space-purple: #4c1d95;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Exo 2', sans-serif;
+      background: #000 url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
+      background-size: cover;
+      color: var(--light);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: -1;
+    }
+
+    .container {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+    }
+
+    header {
+      text-align: center;
+      padding: 5px 0;
+      flex: 0 0 auto;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: var(--light);
+      margin-bottom: 0;
+      text-shadow: 0 0 10px rgba(52, 152, 219, 0.7);
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--secondary);
+      opacity: 0.9;
+    }
+
+    .mission-status {
+      background: rgba(46, 204, 113, 0.2);
+      border-left: 4px solid var(--success);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      margin-top: 5px;
+      display: inline-block;
+    }
+
+    .main-content {
+      display: flex;
+      flex: 1;
+      gap: 15px;
+      height: calc(100vh - 80px);
+      overflow: hidden;
+    }
+
+    .panel {
+      background: rgba(26, 37, 48, 0.8);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(52, 152, 219, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3), 
+                  0 0 10px rgba(52, 152, 219, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .control-panel {
+      flex: 0 0 350px;
+    }
+
+    .log-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--secondary), var(--space-purple), var(--secondary));
+      z-index: 1;
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid rgba(52, 152, 219, 0.3);
+    }
+
+    .panel-title h2 {
+      font-size: 1.1rem;
+      margin-left: 8px;
+      color: var(--secondary);
+    }
+
+    .panel-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(52, 152, 219, 0.2);
+      border-radius: 50%;
+      color: var(--secondary);
+      font-size: 1rem;
+    }
+
+    /* Control panel specific styles */
+    .control-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: calc(100% - 35px);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    label {
+      font-weight: 600;
+      color: var(--light);
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+    }
+
+    label span {
+      margin-left: 5px;
+      font-size: 0.75rem;
+      color: var(--secondary);
+      opacity: 0.8;
+    }
+
+    input[type="number"] {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(52, 152, 219, 0.3);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--light);
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--secondary);
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Direction control pad */
+    .direction-control {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 8px;
+      margin: 5px 0;
+    }
+
+    .direction-btn {
+      background: rgba(52, 152, 219, 0.2);
+      border: 1px solid rgba(52, 152, 219, 0.3);
+      border-radius: 6px;
+      height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .direction-btn:hover {
+      background: rgba(52, 152, 219, 0.3);
+    }
+
+    .direction-btn.active {
+      background: rgba(52, 152, 219, 0.5);
+      box-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
+    }
+
+    .direction-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--light);
+      transition: transform 0.2s ease;
+    }
+
+    .direction-btn:hover svg {
+      transform: scale(1.1);
+    }
+
+    .direction-btn:active svg {
+      transform: scale(0.9);
+    }
+
+    .direction-btn.forward {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .direction-btn.left {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .direction-btn.center {
+      grid-column: 2;
+      grid-row: 2;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      cursor: default;
+    }
+
+    .direction-btn.right {
+      grid-column: 3;
+      grid-row: 2;
+    }
+
+    .direction-btn.backward {
+      grid-column: 2;
+      grid-row: 3;
+    }
+
+    /* Command buttons */
+    .command-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .command-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Exo 2', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .command-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: all 0.5s ease;
+    }
+
+    .command-btn:hover::before {
+      left: 100%;
+    }
+
+    .command-btn.drive {
+      background: linear-gradient(135deg, #2ecc71, #27ae60);
+      color: white;
+    }
+
+    .command-btn.sleep {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: white;
+    }
+
+    .command-btn.telemetry {
+      background: linear-gradient(135deg, #f39c12, #d35400);
+      color: white;
+    }
+
+    .command-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .command-btn:active {
+      transform: translateY(1px);
+    }
+
+    /* Response log panel */
+    .log-container {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(52, 152, 219, 0.3);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #response-log {
+      width: 100%;
+      height: 100%;
+      padding: 10px;
+      font-family: 'Courier New', monospace;
+      background: transparent;
+      color: #2ecc71;
+      border: none;
+      resize: none;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      overflow-y: auto;
+    }
+
+    #response-log:focus {
+      outline: none;
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .log-title {
+      display: flex;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .log-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      position: relative;
+    }
+
+    .status-indicator::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(2.5);
+        opacity: 0;
+      }
+    }
+
+    .status-text {
+      font-size: 0.75rem;
+      color: var(--success);
+    }
+
+    /* Responsive styles */
+    @media (max-width: 768px) {
+      .main-content {
+        flex-direction: column;
+      }
+
+      .control-panel {
+        flex: 0 0 auto;
+      }
+
+      .log-panel {
+        flex: 1 1 50%;
+      }
+    }
+
+    /* Validation styles */
+    .error-message {
+      color: var(--accent);
+      font-size: 0.75rem;
+      margin-top: 2px;
+      display: none;
+    }
+
+    input.error {
+      border-color: var(--accent);
+    }
+
+    /* Hidden input for storing direction value */
+    #direction-value {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-    <h1>Robot Commands</h1>
-    <div class="panel">
-        <form id="robotForm">
-            <label for="direction">Direction:</label>
-            <select id="direction" name="direction">
-                <option value="1">FORWARD</option>
-                <option value="2">BACKWARD</option>
-                <option value="3">RIGHT</option>
-                <option value="4">LEFT</option>
-            </select>
-            <label for="speed">Speed:</label>
-            <input type="number" id="speed" name="speed" placeholder="e.g., 80" required>
-            <label for="duration">Duration (sec):</label>
-            <input type="number" id="duration" name="duration" placeholder="e.g., 10" required>
-            <div class="btn-group">
-                <a href="#" class="command-btn" onclick="Drive(); return false;">Drive</a>
-                <a href="#" class="command-btn" onclick="Sleep(); return false;">Sleep</a>
-                <a href="#" class="command-btn" onclick="Telemetry(); return false;">Telemetry</a>
+  <div class="container">
+    <header>
+      <h1>SPACE ROVER MISSION CONTROL</h1>
+      <p class="subtitle">Remote Command Interface v2.0</p>
+      <div class="mission-status">MISSION STATUS: ACTIVE • SIGNAL STRENGTH: EXCELLENT</div>
+    </header>
+
+    <div class="main-content">
+      <div class="panel control-panel">
+        <div class="panel-title">
+          <div class="panel-icon">🎮</div>
+          <h2>Command Center</h2>
+        </div>
+
+        <form id="robotForm" class="control-form">
+          <input type="hidden" id="direction-value" value="1">
+          
+          <div class="form-group">
+            <label for="direction-control">Direction Control</label>
+            <div class="direction-control">
+              <div class="direction-btn forward" data-direction="1" onclick="setDirection(1)">
+                <svg viewBox="0 0 24 24"><path d="M12 3l8 8h-6v10h-4v-10h-6z"/></svg>
+              </div>
+              <div class="direction-btn left" data-direction="4" onclick="setDirection(4)">
+                <svg viewBox="0 0 24 24"><path d="M3 12l8-8v6h10v4h-10v6z"/></svg>
+              </div>
+              <div class="direction-btn center">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+              <div class="direction-btn right" data-direction="3" onclick="setDirection(3)">
+                <svg viewBox="0 0 24 24"><path d="M21 12l-8-8v6h-10v4h10v6z"/></svg>
+              </div>
+              <div class="direction-btn backward" data-direction="2" onclick="setDirection(2)">
+                <svg viewBox="0 0 24 24"><path d="M12 21l-8-8h6v-10h4v10h6z"/></svg>
+              </div>
             </div>
+          </div>
+
+          <div class="form-group">
+            <label for="speed">Speed <span>(80-100)</span></label>
+            <input type="number" id="speed" name="speed" min="80" max="100" placeholder="Enter speed" required />
+            <div class="error-message" id="speed-error">Speed must be between 80 and 100</div>
+          </div>
+
+          <div class="form-group">
+            <label for="duration">Duration <span>(seconds, max 255)</span></label>
+            <input type="number" id="duration" name="duration" min="1" max="255" placeholder="Enter duration" required />
+            <div class="error-message" id="duration-error">Duration must be a positive number less than 256</div>
+          </div>
+
+          <div class="command-buttons">
+            <button type="button" class="command-btn drive" onclick="Drive()">DRIVE</button>
+            <button type="button" class="command-btn sleep" onclick="Sleep()">SLEEP</button>
+            <button type="button" class="command-btn telemetry" onclick="Telemetry()">TELEMETRY</button>
+          </div>
         </form>
+      </div>
+
+      <div class="panel log-panel">
+        <div class="panel-title">
+          <div class="panel-icon">📡</div>
+          <h2>Mission Log</h2>
+        </div>
+        
+        <div class="log-header">
+          <div class="log-title">Rover Communication</div>
+          <div class="log-status">
+            <div class="status-indicator"></div>
+            <div class="status-text">CONNECTED</div>
+          </div>
+        </div>
+        
+        <div class="log-container">
+          <textarea id="response-log" readonly></textarea>
+        </div>
+      </div>
     </div>
-    <div class="panel">
-        <h2>Response Log</h2>
-        <textarea id="response-log" readonly></textarea>
-    </div>
-    <script>
-        function logMessage(message) {
-            const logArea = document.getElementById('response-log');
-            logArea.value += message + "\n";
-            logArea.scrollTop = logArea.scrollHeight;
-        }
+  </div>
 
-        function Drive() {
-            const dir = document.getElementById('direction').value;
-            const dur = document.getElementById('duration').value;
-            const sp = document.getElementById('speed').value;
-            fetch(`/telecommand/${dir}/${dur}/${sp}`, { method: "PUT" })
-                .then(response => response.text())
-                .then(data => logMessage(data))
-                .catch(error => logMessage("Drive Error: " + error));
-        }
+  <script>
+    // Set initial direction
+    setDirection(1);
+    
+    // Function to set direction
+    function setDirection(direction) {
+      // Update hidden input value
+      document.getElementById('direction-value').value = direction;
+      
+      // Remove active class from all buttons
+      document.querySelectorAll('.direction-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Add active class to selected button
+      const selectedBtn = document.querySelector(`.direction-btn[data-direction="${direction}"]`);
+      if (selectedBtn) {
+        selectedBtn.classList.add('active');
+      }
+    }
 
-        function Sleep() {
-            fetch("/telecommand/", { method: "PUT" })
-                .then(response => response.text())
-                .then(data => logMessage(data))
-                .catch(error => logMessage("Sleep Error: " + error));
-        }
+    // Validate inputs
+    function validateInputs() {
+      const speed = document.getElementById('speed').value;
+      const duration = document.getElementById('duration').value;
+      let isValid = true;
+      
+      // Validate speed
+      if (speed < 80 || speed > 100) {
+        document.getElementById('speed').classList.add('error');
+        document.getElementById('speed-error').style.display = 'block';
+        isValid = false;
+      } else {
+        document.getElementById('speed').classList.remove('error');
+        document.getElementById('speed-error').style.display = 'none';
+      }
+      
+      // Validate duration
+      if (duration < 1 || duration > 255) {
+        document.getElementById('duration').classList.add('error');
+        document.getElementById('duration-error').style.display = 'block';
+        isValid = false;
+      } else {
+        document.getElementById('duration').classList.remove('error');
+        document.getElementById('duration-error').style.display = 'none';
+      }
+      
+      return isValid;
+    }
 
-        function Telemetry() {
-            fetch("/telemetry_request/", { method: "GET" })
-                .then(response => response.text())
-                .then(data => logMessage(data))
-                .catch(error => logMessage("Telemetry Error: " + error));
-        }
-    </script>
+    function logMessage(message) {
+      const logArea = document.getElementById('response-log');
+      const timestamp = new Date().toLocaleTimeString();
+      logArea.value += `[${timestamp}] ${message}\n`;
+      logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    function Drive() {
+      if (!validateInputs()) {
+        return;
+      }
+      
+      const dir = document.getElementById('direction-value').value;
+      const dur = document.getElementById('duration').value;
+      const sp = document.getElementById('speed').value;
+      
+      // Add visual feedback
+      const driveBtn = document.querySelector('.command-btn.drive');
+      driveBtn.style.opacity = '0.7';
+      setTimeout(() => { driveBtn.style.opacity = '1'; }, 300);
+      
+      logMessage(`Sending drive command: Direction=${getDirectionName(dir)}, Speed=${sp}, Duration=${dur}s`);
+      
+      fetch(`/telecommand/${dir}/${dur}/${sp}`, { method: "PUT" })
+        .then(response => response.text())
+        .then(data => logMessage(data))
+        .catch(error => logMessage("Drive Error: " + error));
+    }
+
+    function Sleep() {
+      // Add visual feedback
+      const sleepBtn = document.querySelector('.command-btn.sleep');
+      sleepBtn.style.opacity = '0.7';
+      setTimeout(() => { sleepBtn.style.opacity = '1'; }, 300);
+      
+      logMessage("Sending sleep command to rover...");
+      
+      fetch("/telecommand/", { method: "PUT" })
+        .then(response => response.text())
+        .then(data => logMessage(data))
+        .catch(error => logMessage("Sleep Error: " + error));
+    }
+
+    function Telemetry() {
+      // Add visual feedback
+      const telemetryBtn = document.querySelector('.command-btn.telemetry');
+      telemetryBtn.style.opacity = '0.7';
+      setTimeout(() => { telemetryBtn.style.opacity = '1'; }, 300);
+      
+      logMessage("Requesting telemetry data from rover...");
+      
+      fetch("/telemetry_request/", { method: "GET" })
+        .then(response => response.text())
+        .then(data => logMessage(data))
+        .catch(error => logMessage("Telemetry Error: " + error));
+    }
+    
+    // Helper function to get direction name
+    function getDirectionName(dir) {
+      const directions = {
+        "1": "Forward",
+        "2": "Backward",
+        "3": "Right",
+        "4": "Left"
+      };
+      return directions[dir] || "Unknown";
+    }
+    
+    // Initialize with a welcome message
+    window.onload = function() {
+      logMessage("Space Rover Command Interface initialized");
+      logMessage("Rover status: Online and awaiting commands");
+      logMessage("Communication link established");
+      logMessage("Ready for mission operations");
+    };
+  </script>
 </body>
 </html>

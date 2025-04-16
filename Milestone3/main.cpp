@@ -159,42 +159,42 @@ int main() {
             for (int i = 0; i < bodyLen; ++i) {
                 os << "Byte[" << i << "] = " << std::hex << std::showbase << static_cast<int>(data[i]) << "\n";
             }
-// Decode enums for better readability
-std::string cmdName;
-switch (data[5]) {
-    case 0: cmdName = "DRIVE"; break;
-    case 1: cmdName = "SLEEP"; break;
-    case 2: cmdName = "RESPONSE"; break;
-    default: cmdName = "UNKNOWN"; break;
-}
+            // Decode enums for better readability
+            std::string cmdName;
+            switch (data[5]) {
+                case 0: cmdName = "DRIVE"; break;
+                case 1: cmdName = "SLEEP"; break;
+                case 2: cmdName = "RESPONSE"; break;
+                default: cmdName = "UNKNOWN"; break;
+            }
 
-std::string direction;
-switch (data[6]) {
-    case 1: direction = "FORWARD"; break;
-    case 2: direction = "BACKWARD"; break;
-    case 3: direction = "RIGHT"; break;
-    case 4: direction = "LEFT"; break;
-    default: direction = "UNKNOWN"; break;
-}
+            std::string direction;
+            switch (data[6]) {
+                case 1: direction = "FORWARD"; break;
+                case 2: direction = "BACKWARD"; break;
+                case 3: direction = "RIGHT"; break;
+                case 4: direction = "LEFT"; break;
+                default: direction = "UNKNOWN"; break;
+            }
 
-int lastPktCount = (data[1] << 8) | data[0];
-int currentGrade = (data[3] << 8) | data[2];
-int hitCount = static_cast<int>(data[4]);
-int lastCmdSpeed = static_cast<int>(data[8]);
+            int lastPktCount = (data[1] << 8) | data[0];
+            int currentGrade = (data[3] << 8) | data[2];
+            int hitCount = static_cast<int>(data[4]);
+            int lastCmdSpeed = static_cast<int>(data[8]);
 
-// Reset to decimal formatting
-os << std::dec;
+            // Reset to decimal formatting
+            os << std::dec;
 
-os << "\nParsed Fields (Human Readable):\n";
-os << "LastPktCounter: " << lastPktCount << "\n";
-os << "CurrentGrade: " << currentGrade << "\n";
-os << "HitCount: " << hitCount << "\n";
-os << "LastCmd: " << cmdName << "\n";
-os << "LastCmdValue (Dir): " << direction << "\n";
-os << "LastCmdSpeed: " << lastCmdSpeed << "%\n";
+            os << "\nParsed Fields (Human Readable):\n";
+            os << "LastPktCounter: " << lastPktCount << "\n";
+            os << "CurrentGrade: " << currentGrade << "\n";
+            os << "HitCount: " << hitCount << "\n";
+            os << "LastCmd: " << cmdName << "\n";
+            os << "LastCmdValue (Dir): " << direction << "\n";
+            os << "LastCmdSpeed: " << lastCmdSpeed << "%\n";
 
-res.set_header("Content-Type", "text/plain");
-res.write(os.str());
+            res.set_header("Content-Type", "text/plain");
+            res.write(os.str());
         } catch (...) {
             res.code = 500;
             res.write("Error parsing telemetry response.\n");
