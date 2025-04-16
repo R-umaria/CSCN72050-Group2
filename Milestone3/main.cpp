@@ -1,4 +1,3 @@
-// main.cpp - Updated with Flexible Telemetry Parsing & Debugging
 #define CROW_MAIN
 #include "crow_all.h"
 #include <fstream>
@@ -8,7 +7,7 @@
 #include "../Milestone2/Milestone2/MySocket.h"
 
 MySocket client(CLIENT, "0.0.0.0", 0, UDP, DEFAULT_SIZE);
-static int packetCount = 0;  // Global packet counter
+static int packetCount = 0;  //global packet counter
 
 int main() {
     crow::SimpleApp app;
@@ -28,7 +27,8 @@ int main() {
         res.end();
     });
 
-    CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::POST)
+    //receives connection information/sets up UDP connection
+    CROW_ROUTE(app, "/connect/<string>/<int>").methods(crow::HTTPMethod::POST)  //only POST
     ([](const crow::request& req, crow::response& res, std::string ip, int port) {
         if (client.GetUDPSocket() == -1) {
             client = MySocket(CLIENT, ip, port, UDP, DEFAULT_SIZE);
@@ -50,15 +50,20 @@ int main() {
         res.end();
     });
 
-    CROW_ROUTE(app, "/telecommand/").methods(crow::HTTPMethod::PUT)
+    //sends sleep style command to robot
+    CROW_ROUTE(app, "/telecommand/").methods(crow::HTTPMethod::PUT) //only PUT
     ([](const crow::request& req, crow::response& res) {
+        //prep packet
         PktDef pkt;
         pkt.SetCmd(PktDef::SLEEP);
         pkt.SetPktCount(++packetCount);
-        pkt.SetBodyData(nullptr, 0);
+      //  pkt.SetBodyData(nullptr, 0);
+
+        //generate packet and send it
         char* raw = pkt.GenPacket();
         client.SendData(raw, pkt.GetLength());
 
+        //receive response and parse it
         char buff[1024];
         int bytesReceived = client.GetData(buff);
         PktDef resp(buff);
@@ -71,26 +76,37 @@ int main() {
         res.end();
     });
 
-    CROW_ROUTE(app, "/telecommand/<int>/<int>/<int>").methods(crow::HTTPMethod::PUT)
+    //sends drive style command to robot
+    CROW_ROUTE(app, "/telecommand/<int>/<int>/<int>").methods(crow::HTTPMethod::PUT)    //only PUT
     ([](const crow::request& req, crow::response& res, int direction, int duration, int speed) {
+        //prep packet
         PktDef pkt;
         pkt.SetCmd(PktDef::DRIVE);
         pkt.SetPktCount(++packetCount);
 
-        DriveBody body{(unsigned char)direction, (unsigned char)duration, (unsigned char)speed};
+        //build drive body
+        DriveBody body;
+        body.Direction = (unsigned char)direction;
+        body.Duration = (unsigned char)duration;
+        body.Speed = (unsigned char)speed;
+
+        //set body data
         char driveData[sizeof(DriveBody)];
         memcpy(driveData, &body, sizeof(DriveBody));
         pkt.SetBodyData(driveData, sizeof(DriveBody));
+
+        //generate packet and send it
         char* raw = pkt.GenPacket();
         client.SendData(raw, pkt.GetLength());
 
+        //receive response and parse it
         char buff[1024];
         int bytesReceived = client.GetData(buff);
         PktDef resp(buff);
         if (bytesReceived > 0 && resp.GetAck()) {
-            std::string dirStr = (direction == 1) ? "FORWARD" : (direction == 2) ? "BACKWARD" : (direction == 3) ? "RIGHT" : "LEFT";
+            std::string dir = (direction == 1) ? "FORWARD" : (direction == 2) ? "BACKWARD" : (direction == 3) ? "RIGHT" : "LEFT";
             std::ostringstream os;
-            os << "Robot is now driving " << dirStr << " for " << duration << " seconds at " << speed << "% speed.\n";
+            os << "Robot is now driving " << dir << " for " << duration << " seconds at " << speed << "% speed.\n";
             res.write(os.str());
         } else {
             res.code = 500;
@@ -99,15 +115,19 @@ int main() {
         res.end();
     });
 
-    CROW_ROUTE(app, "/telemetry_request/").methods(crow::HTTPMethod::GET)
+    CROW_ROUTE(app, "/telemetry_request/").methods(crow::HTTPMethod::GET)   //only GET
     ([](const crow::request& req, crow::response& res) {
+        //prep packet
         PktDef pkt;
         pkt.SetCmd(PktDef::RESPONSE);
         pkt.SetPktCount(++packetCount);
-        pkt.SetBodyData(nullptr, 0);
+        //pkt.SetBodyData(nullptr, 0);
+
+        //generate packet and send it
         char* raw = pkt.GenPacket();
         client.SendData(raw, pkt.GetLength());
     
+        //receive response and parse it
         char buff[1024];
         int bytesReceived = client.GetData(buff);
         try {
@@ -123,6 +143,7 @@ int main() {
                 return;
             }
     
+            //generate packet and send it
             char* rawBody = resp.GetBodyData();
             int bodyLen = resp.GetLength() - HEADERSIZE - 1;
     

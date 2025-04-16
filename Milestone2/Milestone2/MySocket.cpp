@@ -255,37 +255,6 @@ int MySocket::GetData(char* rawData) {
     return bytesReceived;
 }
 
-// --- New functions for Milestone3 ---
-
-// Configures the socket by updating the IP address and port.
-// Returns false if already connected.
-bool MySocket::configure(const std::string& ip, int port) {
-    if (bTCPConnect) {
-        std::cerr << "Socket already connected." << std::endl;
-        return false;
-    }
-    SetIPAddr(ip);
-    SetPort(port);
-    return true;
-}
-
-// Sends a complete packet (as a string) over the socket.
-bool MySocket::sendPacket(const std::string& packet) {
-    SendData(packet.c_str(), packet.size());
-    // In a more robust implementation, check the return value.
-    return true;
-}
-
-// Receives data from the socket and returns it as a string.
-std::string MySocket::receiveResponse() {
-    char recvBuffer[DEFAULT_SIZE];
-    int bytesReceived = GetData(recvBuffer);
-    if (bytesReceived > 0) {
-        return std::string(recvBuffer, bytesReceived);
-    }
-    return "";
-}
-
 int MySocket::GetUDPSocket() {
     return ConnectionSocket;
 }
