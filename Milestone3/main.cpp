@@ -145,14 +145,6 @@ int main() {
             os << "Telemetry Response:\n";
             os << resp.Debug();
 
-            // if (!resp.GetAck()) {
-            //     res.code = 500;
-            //     res.write("Telemetry packet was not acknowledged.\n");
-            //     res.end();
-            //     return;
-            // }
-    
-            //generate packet and send it
             char* rawBody = resp.GetBodyData();
             int bodyLen = resp.GetLength() - HEADERSIZE - 1;
     
@@ -167,35 +159,42 @@ int main() {
             for (int i = 0; i < bodyLen; ++i) {
                 os << "Byte[" << i << "] = " << std::hex << std::showbase << static_cast<int>(data[i]) << "\n";
             }
+// Decode enums for better readability
+std::string cmdName;
+switch (data[5]) {
+    case 0: cmdName = "DRIVE"; break;
+    case 1: cmdName = "SLEEP"; break;
+    case 2: cmdName = "RESPONSE"; break;
+    default: cmdName = "UNKNOWN"; break;
+}
 
-            // Decode enums for better readability
-            std::string cmdName;
-            switch (data[5]) {
-                case 0: cmdName = "DRIVE"; break;
-                case 1: cmdName = "SLEEP"; break;
-                case 2: cmdName = "RESPONSE"; break;
-                default: cmdName = "UNKNOWN"; break;
-            }
+std::string direction;
+switch (data[6]) {
+    case 1: direction = "FORWARD"; break;
+    case 2: direction = "BACKWARD"; break;
+    case 3: direction = "RIGHT"; break;
+    case 4: direction = "LEFT"; break;
+    default: direction = "UNKNOWN"; break;
+}
 
-            std::string direction;
-            switch (data[6]) {
-                case 1: direction = "FORWARD"; break;
-                case 2: direction = "BACKWARD"; break;
-                case 3: direction = "RIGHT"; break;
-                case 4: direction = "LEFT"; break;
-                default: direction = "UNKNOWN"; break;
-            }
+int lastPktCount = (data[1] << 8) | data[0];
+int currentGrade = (data[3] << 8) | data[2];
+int hitCount = static_cast<int>(data[4]);
+int lastCmdSpeed = static_cast<int>(data[8]);
 
-            os << "\nParsed Fields (Human Readable):\n";
-            os << "LastPktCounter: " << (data[1] << 8 | data[0]) << "\n";
-            os << "CurrentGrade: " << (data[3] << 8 | data[2]) << "\n";
-            os << "HitCount: " << static_cast<int>(data[4]) << "\n";
-            os << "LastCmd: " << cmdName << "\n";
-            os << "LastCmdValue (Dir): " << direction << "\n";
-            os << "LastCmdSpeed: " << static_cast<int>(data[7]) << "\n";
+// Reset to decimal formatting
+os << std::dec;
 
-            res.set_header("Content-Type", "text/plain");
-            res.write(os.str());
+os << "\nParsed Fields (Human Readable):\n";
+os << "LastPktCounter: " << lastPktCount << "\n";
+os << "CurrentGrade: " << currentGrade << "\n";
+os << "HitCount: " << hitCount << "\n";
+os << "LastCmd: " << cmdName << "\n";
+os << "LastCmdValue (Dir): " << direction << "\n";
+os << "LastCmdSpeed: " << lastCmdSpeed << "%\n";
+
+res.set_header("Content-Type", "text/plain");
+res.write(os.str());
         } catch (...) {
             res.code = 500;
             res.write("Error parsing telemetry response.\n");
