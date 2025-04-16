@@ -162,8 +162,7 @@ int main() {
                 res.end();
                 return;
             }
-            
-            
+
             unsigned char* data = reinterpret_cast<unsigned char*>(rawBody);
             for (int i = 0; i < bodyLen; ++i) {
                 os << "Byte[" << i << "] = " << std::hex << std::showbase << static_cast<int>(data[i]) << "\n";
