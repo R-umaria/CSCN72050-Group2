@@ -57,7 +57,7 @@ int main() {
         PktDef pkt;
         pkt.SetCmd(PktDef::SLEEP);
         pkt.SetPktCount(++packetCount);
-      //  pkt.SetBodyData(nullptr, 0);
+        pkt.SetBodyData(nullptr, 0);
 
         //generate packet and send it
         char* raw = pkt.GenPacket();
@@ -121,7 +121,7 @@ int main() {
         PktDef pkt;
         pkt.SetCmd(PktDef::RESPONSE);
         pkt.SetPktCount(++packetCount);
-        //pkt.SetBodyData(nullptr, 0);
+        pkt.SetBodyData(nullptr, 0);
 
         //generate packet and send it
         char* raw = pkt.GenPacket();
@@ -130,18 +130,26 @@ int main() {
         //receive response and parse it
         char buff[1024];
         int bytesReceived = client.GetData(buff);
+        if (bytesReceived < 5) {
+            res.write("NACK received.\n");
+        
+        }
+        else {
+            bytesReceived = client.GetData(buff);
+        }
+
         try {
             PktDef resp(buff);
             std::ostringstream os;
             os << "Telemetry Response:\n";
             os << resp.Debug();  // includes length, flags, CRC, etc.
     
-            if (!resp.GetAck()) {
-                res.code = 500;
-                res.write("Telemetry packet was not acknowledged.\n");
-                res.end();
-                return;
-            }
+            // if (!resp.GetAck()) {
+            //     res.code = 500;
+            //     res.write("Telemetry packet was not acknowledged.\n");
+            //     res.end();
+            //     return;
+            // }
     
             //generate packet and send it
             char* rawBody = resp.GetBodyData();
@@ -153,7 +161,8 @@ int main() {
                 res.end();
                 return;
             }
-    
+            
+            
             unsigned char* data = reinterpret_cast<unsigned char*>(rawBody);
             for (int i = 0; i < bodyLen; ++i) {
                 os << "Byte[" << i << "] = " << std::hex << std::showbase << static_cast<int>(data[i]) << "\n";
