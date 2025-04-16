@@ -1,3 +1,4 @@
+// main.cpp - Final Human Readable Telemetry Version
 #define CROW_MAIN
 #include "crow_all.h"
 #include <fstream>
@@ -104,9 +105,9 @@ int main() {
         int bytesReceived = client.GetData(buff);
         PktDef resp(buff);
         if (bytesReceived > 0 && resp.GetAck()) {
-            std::string dir = (direction == 1) ? "FORWARD" : (direction == 2) ? "BACKWARD" : (direction == 3) ? "RIGHT" : "LEFT";
+            std::string dirStr = (direction == 1) ? "FORWARD" : (direction == 2) ? "BACKWARD" : (direction == 3) ? "RIGHT" : "LEFT";
             std::ostringstream os;
-            os << "Robot is now driving " << dir << " for " << duration << " seconds at " << speed << "% speed.\n";
+            os << "Robot is now driving " << dirStr << " for " << duration << " seconds at " << speed << "% speed.\n";
             res.write(os.str());
         } else {
             res.code = 500;
@@ -142,8 +143,8 @@ int main() {
             PktDef resp(buff);
             std::ostringstream os;
             os << "Telemetry Response:\n";
-            os << resp.Debug();  // includes length, flags, CRC, etc.
-    
+            os << resp.Debug();
+
             // if (!resp.GetAck()) {
             //     res.code = 500;
             //     res.write("Telemetry packet was not acknowledged.\n");
@@ -167,29 +168,41 @@ int main() {
             for (int i = 0; i < bodyLen; ++i) {
                 os << "Byte[" << i << "] = " << std::hex << std::showbase << static_cast<int>(data[i]) << "\n";
             }
-    
-            if (bodyLen >= 8) {
-                os << "\nParsed Fields:\n";
-                os << "LastPktCounter: " << (data[0] << 8 | data[1]) << "\n";
-                os << "CurrentGrade: " << (data[2] << 8 | data[3]) << "\n";
-                os << "HitCount: " << static_cast<int>(data[4]) << "\n";
-                os << "LastCmd: " << static_cast<int>(data[5]) << "\n";
-                os << "LastCmdValue: " << static_cast<int>(data[6]) << "\n";
-                os << "LastCmdSpeed: " << static_cast<int>(data[7]) << "\n";
-            } else {
-                os << "\nTelemetry structure incomplete: only " << bodyLen << " bytes.\n";
+
+            // Decode enums for better readability
+            std::string cmdName;
+            switch (data[5]) {
+                case 0: cmdName = "DRIVE"; break;
+                case 1: cmdName = "SLEEP"; break;
+                case 2: cmdName = "RESPONSE"; break;
+                default: cmdName = "UNKNOWN"; break;
             }
-    
+
+            std::string direction;
+            switch (data[6]) {
+                case 1: direction = "FORWARD"; break;
+                case 2: direction = "BACKWARD"; break;
+                case 3: direction = "RIGHT"; break;
+                case 4: direction = "LEFT"; break;
+                default: direction = "UNKNOWN"; break;
+            }
+
+            os << "\nParsed Fields (Human Readable):\n";
+            os << "LastPktCounter: " << (data[1] << 8 | data[0]) << "\n";
+            os << "CurrentGrade: " << (data[3] << 8 | data[2]) << "\n";
+            os << "HitCount: " << static_cast<int>(data[4]) << "\n";
+            os << "LastCmd: " << cmdName << "\n";
+            os << "LastCmdValue (Dir): " << direction << "\n";
+            os << "LastCmdSpeed: " << static_cast<int>(data[7]) << "\n";
+
             res.set_header("Content-Type", "text/plain");
             res.write(os.str());
         } catch (...) {
             res.code = 500;
             res.write("Error parsing telemetry response.\n");
         }
-    
         res.end();
     });
-    
 
     app.port(23500).multithreaded().run();
     return 0;
