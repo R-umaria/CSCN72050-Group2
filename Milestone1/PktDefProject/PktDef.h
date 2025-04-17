@@ -4,12 +4,11 @@
 #define PKTDEF_H
 
 #include <memory>
-#include <cstring>   // For memcpy
-#include <cstdlib>   // For malloc/free
+#include <cstring>   //for memcpy
+#include <cstdlib>   //for malloc/free
 
 /*
-    CSCN72050 Term Project, Protocol vW25B
-    Milestone #1
+    CSCN72050 Term Project, Milestone #1
 
     Application layer protocol:
       - Header (4 bytes total):
@@ -26,12 +25,12 @@
           - CRC: 1 byte (unsigned char) parity check calculated by counting the number of bits set to '1'
 */
 
-// Constant definitions for drive directions and header size.
+//constant definitions for drive commands and headersize
 const int FORWARD = 1;
 const int BACKWARD = 2;
 const int RIGHT = 3;
 const int LEFT = 4;
-const int HEADERSIZE = 4; // PktCount (2 bytes) + Command Flags (1 byte) + Length (1 byte) = 4 bytes.
+const int HEADERSIZE = 4; //PktCount (2 bytes) + Command Flags (1 byte) + Length (1 byte) = 4 bytes.
 
 struct Header {
     unsigned short int PktCount;     // 2 bytes
@@ -43,28 +42,29 @@ struct Header {
     uint8_t Length;                  // 1 byte
 };
 
-// Drive Command Structure
+//drive command structure
 struct DriveBody {
     unsigned char Direction; // 1-byte direction: FORWARD, BACKWARD, RIGHT, or LEFT.
     unsigned char Duration;  // 1-byte duration (in seconds).
     unsigned char Speed;     // 1-byte motor speed percentage (80-100).
 };
 
+//packet structure
 class PktDef {
 private:
-    // Complete Packet Structure
+    //complete packet
     struct CmdPacket {
-        Header header;      // Packet header.
-        char* Data;         // Pointer to the packet body data.
-        unsigned char CRC;  // 1-byte CRC for packet validation.
+        Header header;      // Packet header
+        char* Data;         // Pointer to the packet body data
+        unsigned char CRC;  // 1-byte CRC for packet validation
     } packet;
 
-    char* RawBuffer;  // Holds completed, serialized packet for transmission
+    char* RawBuffer;  //holds completed, serialized packet for transmission
 
-    int CountBits(unsigned char byte) const;  // Counts # of bits set to '1'
+    int CountBits(unsigned char byte) const;  //counts # of bits set to '1'
 
 public:
-    enum CmdType { DRIVE, SLEEP, RESPONSE };      // Enumerated command types.
+    enum CmdType { DRIVE, SLEEP, RESPONSE };      //command types.
 
     // --- Constructors and Destructor ---
     PktDef();
@@ -83,29 +83,17 @@ public:
     char* GetBodyData() const;
     int GetPktCount() const;
 
-    // Checks the CRC of a given raw data buffer.
+    //checks the CRC of a given raw data buffer
     bool CheckCRC(char* buffer, int size) const;
 
-    // Calculates the 1-byte CRC for the packet (by counting bits set to '1')
+    //calculates CRC
     void CalcCRC();
 
-    // Generates a complete serialized packet in RawBuffer.
+    //generates serialized packet
     char* GenPacket();
-
-
-    //updates from milestone3
-    // 
-    // Generates and returns a complete serialized packet as a std::string.
-    // For drive commands, body data is constructed from a DriveBody.
-    static std::string createDriveCommand(int direction, int speed, int duration);
-    // Creates a packet for a sleep command (no body data).
-    static std::string createSleepCommand();
-    // Creates a packet to request telemetry data (using the RESPONSE flag).
-    static std::string createTelemetryRequest();
     
-    // Debug function to print internal packet info
+    //for debugging telemetry
     std::string Debug() const;
-
 };
 
 #endif // PKTDEF_H

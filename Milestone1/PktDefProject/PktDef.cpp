@@ -1,31 +1,31 @@
 // Rishi Umaria & Tyler Phillips - Group Project - Milestone 1 - Mobile & Networked Systems
 
 #include "PktDef.h"
-#include <cstring>   // For memcpy
-#include <sstream>   // update from milesone3
+#include <cstring>   //for memcpy
+#include <sstream>   
 
-// Default constructor
+//default constructor
 PktDef::PktDef() {
-    // Set all header information to 0
+    //set all header information to 0
     packet.header.PktCount = 0;
     packet.header.Ack = false;
     packet.header.Sleep = false;
     packet.header.Status = false;
     packet.header.Drive = false;
     packet.header.Length = 0;
-    // Set Data to nullptr
+    //set Data to nullptr
     packet.Data = nullptr;
-    // Set CRC to 0
+    //set CRC to 0
     packet.CRC = 0;
-    // Set RawBuffer to nullptr
+    //set RawBuffer to nullptr
     RawBuffer = nullptr;
 }
 
-// Overloaded constructor
+//overloaded constructor
 PktDef::PktDef(char* rawBuffer) {
-    memcpy(&packet.header, rawBuffer, HEADERSIZE);  // Copy the header
+    memcpy(&packet.header, rawBuffer, HEADERSIZE);  //copy the header
    
-    int bodyLength = packet.header.Length - (HEADERSIZE + 1);   // Calculate body length
+    int bodyLength = packet.header.Length - (HEADERSIZE + 1);   //calculate body length
     if (bodyLength > 0) {
         packet.Data = new char[bodyLength];
         memcpy(packet.Data, rawBuffer + HEADERSIZE, bodyLength);
@@ -33,31 +33,31 @@ PktDef::PktDef(char* rawBuffer) {
     else {
         packet.Data = nullptr;
     }
-    // Set the CRC from the last byte of the raw buffer
+    //set the CRC from the last byte of the raw buffer
     packet.CRC = *(reinterpret_cast<unsigned char*>(rawBuffer + packet.header.Length - 1));
     RawBuffer = nullptr;
 }
 
-// Destructor
+//destructor
 PktDef::~PktDef() {
-    if (packet.Data != nullptr) {   // Frees memory for Data
+    if (packet.Data != nullptr) {   //frees memory for Data
         delete[] packet.Data;
         packet.Data = nullptr;
     }
-    if (RawBuffer != nullptr) {     // Frees memory for RawBuffer
+    if (RawBuffer != nullptr) {     //frees memory for RawBuffer
         delete[] RawBuffer;
         RawBuffer = nullptr;
     }
 }
 
-// Sets command type
+//sets command type
 void PktDef::SetCmd(CmdType cmdType) {
     packet.header.Drive = false;
     packet.header.Status = false;
     packet.header.Sleep = false;
     packet.header.Ack = true;
 
-    // Sets packet command flag based on cmdType
+    //sets packet command flag based on cmdType
     if (cmdType == DRIVE)
         packet.header.Drive = true;
     else if (cmdType == SLEEP)
@@ -68,26 +68,26 @@ void PktDef::SetCmd(CmdType cmdType) {
         packet.header.Ack = false;
 }
 
-// Sets body data
+//sets body data
 void PktDef::SetBodyData(char* data, int size) {
     if (packet.Data != nullptr) {
         delete[] packet.Data;
         packet.Data = nullptr;
     }
     if (size > 0) {
-        packet.Data = new char[size];      // Allocates memory for body based on size
-        memcpy(packet.Data, data, size);   // Copies data into Data    
+        packet.Data = new char[size];      //allocates memory for body based on size
+        memcpy(packet.Data, data, size);   //copies data into Data    
     }
-    // Update Length: header + body + tail (1 byte for CRC)
+    //update Length: header + body + tail (1 byte for CRC)
     packet.header.Length = HEADERSIZE + size + 1;
 }
 
-// Sets the packet counter
+//sets the packet counter
 void PktDef::SetPktCount(int pktCount) {
     packet.header.PktCount = pktCount;
 }
 
-// Returns the command type based on the header flag
+//returns the command type based on the header flag
 PktDef::CmdType PktDef::GetCmd() const {
     if (packet.header.Drive)
         return DRIVE;
@@ -99,27 +99,27 @@ PktDef::CmdType PktDef::GetCmd() const {
     return RESPONSE;
 }
 
-// Returns the value of the ack flag in the header
+//returns the value of the ack flag in the header
 bool PktDef::GetAck() const {
     return packet.header.Ack;
 }
 
-// Returns the packet Length stored in the header
+//returns the packet Length stored in the header
 int PktDef::GetLength() const {
     return packet.header.Length;
 }
 
-// Returns a pointer to the packet's body data
+//returns a pointer to the packet's body data
 char* PktDef::GetBodyData() const {
     return packet.Data;
 }
 
-// Returns the packet count
+//returns the packet count
 int PktDef::GetPktCount() const {
     return packet.header.PktCount;
 }
 
-// Helper function to count the number of bits set to '1' in a byte
+//helper function to count the number of bits set to '1' in a byte
 int PktDef::CountBits(unsigned char byte) const {
     int count = 0;
     while (byte) {
@@ -129,30 +129,30 @@ int PktDef::CountBits(unsigned char byte) const {
     return count;
 }
 
-// Calculates the CRC for the packet and updates the packet's CRC field
+//calculates the CRC for the packet and updates the packet's CRC field
 void PktDef::CalcCRC() {
     int totalBits = 0;
     // Process header bytes
     unsigned char* headerBytes = reinterpret_cast<unsigned char*>(&packet.header);
-    for (int i = 0; i < HEADERSIZE; i++) {
+    for (int i = 0; i < HEADERSIZE; i++) {  //counts bits in header
         totalBits += CountBits(headerBytes[i]);
     }
     // Process body data if there is any
     int bodyLength = packet.header.Length - (HEADERSIZE + 1); // Subtract head and tail bytes
-    if (bodyLength > 0 && packet.Data != nullptr) {
+    if (bodyLength > 0 && packet.Data != nullptr) { //counts bits in body if any
         for (int i = 0; i < bodyLength; i++) {
             totalBits += CountBits(static_cast<unsigned char>(packet.Data[i]));
         }
     }
-    packet.CRC = static_cast<unsigned char>(totalBits);
+    packet.CRC = static_cast<unsigned char>(totalBits); //sets CRC
 }
 
-// Validates the CRC provided matches the CRC of the packet
+//validates the CRC provided matches the CRC of the packet
 bool PktDef::CheckCRC(char* buffer, int size) const {
     if (size <= 0)
         return false;
     int totalBits = 0;
-    // Calculate CRC for the head and the body (size - 1)
+    //calculate CRC for the head and the body (size - 1)
     for (int i = 0; i < size - 1; i++) {
         totalBits += CountBits(static_cast<unsigned char>(buffer[i]));
     }
@@ -161,28 +161,28 @@ bool PktDef::CheckCRC(char* buffer, int size) const {
     return (crcCalculated == crcProvided);
 }
 
-// Generates the complete serialized packet in RawBuffer
+//generates the complete serialized packet in RawBuffer
 char* PktDef::GenPacket() {
     int totalSize = packet.header.Length;
-    // Free any previously allocated RawBuffer.
+    //free any memory allocated to RawBuffer
     if (RawBuffer != nullptr) {
         delete[] RawBuffer;
         RawBuffer = nullptr;
     }
     RawBuffer = new char[totalSize];
-    memcpy(RawBuffer, &packet.header, HEADERSIZE);                  // Copy header
+    memcpy(RawBuffer, &packet.header, HEADERSIZE);                  //copy header
     // Calculate body length (if any) and copy it.
-    int bodyLength = totalSize - (HEADERSIZE + 1);                  // Determine body length
+    int bodyLength = totalSize - (HEADERSIZE + 1);                  //determine body length
     if (bodyLength > 0 && packet.Data != nullptr) {
-        memcpy(RawBuffer + HEADERSIZE, packet.Data, bodyLength);    // Copy body
+        memcpy(RawBuffer + HEADERSIZE, packet.Data, bodyLength);    //copy body
     }
 
     CalcCRC();
-    RawBuffer[totalSize - 1] = packet.CRC;  // Add CRC to packet
+    RawBuffer[totalSize - 1] = packet.CRC;  //add CRC to packet
     return RawBuffer;
 }
 
-// Debug function to print internal packet info
+//debug function to print internal packet info
 std::string PktDef::Debug() const {
     std::ostringstream os;
     os << "---- PktDef Debug Info ----\n";
