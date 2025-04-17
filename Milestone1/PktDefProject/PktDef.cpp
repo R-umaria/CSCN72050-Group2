@@ -186,26 +186,16 @@ char* PktDef::GenPacket() {
 std::string PktDef::Debug() const {
     std::ostringstream os;
     os << "---- PktDef Debug Info ----\n";
-    os << "Packet Length: " << packet.header.Length << "\n";
+    os << "Packet Length: " << static_cast<int>(packet.header.Length) << "\n";
     os << "Packet Count: " << packet.header.PktCount << "\n";
-    os << "Command Flags => Drive: " << packet.header.Drive
-       << ", Sleep: " << packet.header.Sleep
-       << ", Status: " << packet.header.Status
-       << ", Ack: " << packet.header.Ack << "\n";
-    os << "CRC: " << static_cast<int>(packet.CRC) << "\n";
+    // os << "Command Flags => Drive: " << packet.header.Drive
+    //    << ", Sleep: " << packet.header.Sleep
+    //    << ", Status: " << packet.header.Status
+    //    << ", Ack: " << packet.header.Ack << "\n";
+    // os << "CRC: " << static_cast<int>(packet.CRC) << "\n";
 
-    int bodyLength = packet.header.Length - (HEADERSIZE + 1);
-    os << "Body Length: " << bodyLength << "\n";
-
-    if (packet.Data != nullptr && bodyLength > 0) {
-        for (int i = 0; i < bodyLength; ++i) {
-            os << "Byte[" << i << "] = " << std::hex << std::showbase
-               << static_cast<int>(static_cast<unsigned char>(packet.Data[i])) << "\n";
-        }
-    } else {
-        os << "No body data.\n";
-    }
-
-    os << "---------------------------\n";
+    // int bodyLength = packet.header.Length - (HEADERSIZE + 1);
+    // os << "Body Length: " << bodyLength << "\n";
+    // os << "---------------------------\n";
     return os.str();
 }

@@ -156,9 +156,9 @@ int main() {
             }
 
             unsigned char* data = reinterpret_cast<unsigned char*>(rawBody);
-            for (int i = 0; i < bodyLen; ++i) {
-                os << "Byte[" << i << "] = " << std::hex << std::showbase << static_cast<int>(data[i]) << "\n";
-            }
+            // for (int i = 0; i < bodyLen; ++i) {
+            //     os << "Byte[" << i << "] = " << std::hex << std::showbase << static_cast<int>(data[i]) << "\n";
+            // }
             // Decode enums for better readability
             std::string cmdName;
             switch (data[5]) {
@@ -185,13 +185,13 @@ int main() {
             // Reset to decimal formatting
             os << std::dec;
 
-            os << "\nParsed Fields (Human Readable):\n";
-            os << "LastPktCounter: " << lastPktCount << "\n";
-            os << "CurrentGrade: " << currentGrade << "\n";
-            os << "HitCount: " << hitCount << "\n";
-            os << "LastCmd: " << cmdName << "\n";
-            os << "LastCmdValue (Dir): " << direction << "\n";
-            os << "LastCmdSpeed: " << lastCmdSpeed << "%\n";
+            os << "\nDecoded Telemetry:\n";
+            os << " - LastPktCounter: " << lastPktCount << "\n";
+            os << " - CurrentGrade: " << currentGrade << "\n";
+            os << " - HitCount: " << hitCount << "\n";
+            os << " - LastCmd: " << cmdName << ", ";
+            os << direction << ", ";
+            os << "Speed: " << lastCmdSpeed << "%\n";
 
             res.set_header("Content-Type", "text/plain");
             res.write(os.str());
