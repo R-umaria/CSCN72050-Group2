@@ -56,7 +56,7 @@ robot_controller/
 ```bash
 docker run -ti \
   -p 23500:23500 \
-  -v "C:/Users/Rishi/source/repos/Mobile and Networked Systems/Robot__Simulator/RobotController/:/mnt/robot_controller" \
+  -v "<path>/:/mnt/robot_controller" \
   webserver_dev_updated bash
 ```
 > This mounts your project folder to `/mnt/robot_controller` in the container.
@@ -93,6 +93,9 @@ http://<docker-host-ip>:23500/
 - **Landing Page:** `/`
 - **Command UI:** `/command.html`
 
+Login & Dashboard UI  
+[<img src="LoginUI.png" width="250"/>](LoginUI.png)  
+[<img src="home_control.png" width="750"/>](home_control.png)
 ---
 
 ## 📡 REST API Endpoints
